@@ -10,4 +10,8 @@ final class LoggerImpl: Logger {
     func log(_ entry: LogEntry) {
         loggers.forEach { $0.log(entry) }
     }
+
+    func error(_ entry: LogEntry) {
+        loggers.forEach { $0.error(entry) }
+    }
 }

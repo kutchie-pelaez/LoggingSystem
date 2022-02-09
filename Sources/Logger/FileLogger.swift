@@ -10,4 +10,8 @@ final class FileLogger: Logger {
     func log(_ entry: LogEntry) {
 
     }
+
+    func error(_ entry: LogEntry) {
+
+    }
 }

@@ -10,4 +10,8 @@ final class ConsoleLogger: Logger {
     func log(_ entry: LogEntry) {
 
     }
+
+    func error(_ entry: LogEntry) {
+
+    }
 }
