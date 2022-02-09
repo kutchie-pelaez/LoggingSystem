@@ -14,4 +14,8 @@ final class LoggerImpl: Logger {
     func error(_ entry: LogEntry) {
         loggers.forEach { $0.error(entry) }
     }
+
+    func warning(_ entry: LogEntry) {
+        loggers.forEach { $0.warning(entry) }
+    }
 }

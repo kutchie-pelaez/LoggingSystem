@@ -1,6 +1,7 @@
 public protocol Logger {
     func log(_ entry: LogEntry)
     func error(_ entry: LogEntry)
+    func warning(_ entry: LogEntry)
 }
 
 extension Logger {
@@ -20,5 +21,14 @@ extension Logger {
         )
 
         error(entry)
+    }
+
+    public func warning(_ message: String, domain: LogDomain) {
+        let entry = LogEntry(
+            message: message,
+            domain: domain
+        )
+
+        warning(entry)
     }
 }

@@ -14,4 +14,8 @@ final class ConsoleLogger: Logger {
     func error(_ entry: LogEntry) {
 
     }
+
+    func warning(_ entry: LogEntry) {
+
+    }
 }
