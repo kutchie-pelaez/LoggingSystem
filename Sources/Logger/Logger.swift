@@ -1,13 +1,22 @@
 public protocol Logger {
     func log(_ entry: LogEntry)
-    func error(_ entry: LogEntry)
-    func warning(_ entry: LogEntry)
 }
 
 extension Logger {
     public func log(_ message: String, domain: LogDomain) {
         let entry = LogEntry(
             message: message,
+            level: .log,
+            domain: domain
+        )
+
+        log(entry)
+    }
+
+    public func warning(_ message: String, domain: LogDomain) {
+        let entry = LogEntry(
+            message: message,
+            level: .warning,
             domain: domain
         )
 
@@ -17,18 +26,10 @@ extension Logger {
     public func error(_ message: String, domain: LogDomain) {
         let entry = LogEntry(
             message: message,
+            level: .error,
             domain: domain
         )
 
-        error(entry)
-    }
-
-    public func warning(_ message: String, domain: LogDomain) {
-        let entry = LogEntry(
-            message: message,
-            domain: domain
-        )
-
-        warning(entry)
+        log(entry)
     }
 }
