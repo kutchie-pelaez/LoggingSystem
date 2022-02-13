@@ -21,6 +21,7 @@ final class FileLogger: Logger {
     private let consoleLogger: Logger?
 
     private let fileManager = FileManager.default
+    private var shouldAddNewLineFirst = true
 
     private lazy var handle: FileHandle? = {
         let logsURL = provider.logsURL
@@ -33,6 +34,7 @@ final class FileLogger: Logger {
                     atomically: true,
                     encoding: .utf8
                 )
+                shouldAddNewLineFirst = false
             } catch {
                 consoleLogger?.error(
                     "Failed to create empty logs file at \(logsPath)",
@@ -61,6 +63,15 @@ final class FileLogger: Logger {
 
         do {
             try handle?.seekToEnd()
+
+            if
+                shouldAddNewLineFirst,
+                let newLineData = "\n".data(using: .utf8)
+            {
+                handle?.write(newLineData)
+                shouldAddNewLineFirst = false
+            }
+
             handle?.write(messageData)
         } catch {
             consoleLogger?.error(
