@@ -15,7 +15,9 @@ struct ConsoleLogger: Logger {
 
     // MARK: - Logger
 
-    func log(_ entry: LogEntry) {
+    func log(_ entry: LogEntry, to target: LogTarget) {
+        guard target.contains(.console) else { return }
+
         let message = composer.compose(entry)
         print(message)
     }

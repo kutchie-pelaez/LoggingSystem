@@ -52,7 +52,9 @@ final class FileLogger: Logger {
 
     // MARK: - Logger
 
-    func log(_ entry: LogEntry) {
+    func log(_ entry: LogEntry, to target: LogTarget) {
+        guard target.contains(.file) else { return }
+
         let message = composer.compose(entry) + "\n"
 
         guard let messageData = message.data(using: .utf8) else { return }

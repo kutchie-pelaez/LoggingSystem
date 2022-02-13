@@ -1,5 +1,5 @@
 public protocol Logger {
-    func log(_ entry: LogEntry)
+    func log(_ entry: LogEntry, to target: LogTarget)
 }
 
 extension Logger {
@@ -10,7 +10,10 @@ extension Logger {
             domain: domain
         )
 
-        log(entry)
+        log(
+            entry,
+            to: .all
+        )
     }
 
     public func warning(_ message: String, domain: LogDomain) {
@@ -20,7 +23,10 @@ extension Logger {
             domain: domain
         )
 
-        log(entry)
+        log(
+            entry,
+            to: .all
+        )
     }
 
     public func error(_ message: String, domain: LogDomain) {
@@ -30,6 +36,9 @@ extension Logger {
             domain: domain
         )
 
-        log(entry)
+        log(
+            entry,
+            to: .all
+        )
     }
 }
