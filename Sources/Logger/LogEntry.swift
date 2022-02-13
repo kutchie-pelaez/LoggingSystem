@@ -3,6 +3,19 @@ public struct LogEntry {
         case log
         case warning
         case error
+
+        internal var symbol: String? {
+            switch self {
+            case .log:
+                return nil
+
+            case .warning:
+                return "🟡"
+
+            case .error:
+                return "🔴"
+            }
+        }
     }
 
     public init(

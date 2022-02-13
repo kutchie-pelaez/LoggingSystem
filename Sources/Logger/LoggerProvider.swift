@@ -2,6 +2,7 @@ import Foundation
 
 public protocol LoggerProvider {
     var logsURL: URL { get }
+    var sessionAdditionalParams: [String] { get }
 }
 
 extension LoggerProvider {
@@ -9,5 +10,9 @@ extension LoggerProvider {
         FileManager.default
             .documents
             .appendingPathComponent("logs")
+    }
+
+    public var sessionAdditionalParams: [String] {
+        []
     }
 }

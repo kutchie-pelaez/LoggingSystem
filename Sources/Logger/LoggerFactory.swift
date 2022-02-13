@@ -1,20 +1,20 @@
 import Core
+import SessionManager
 
 public struct LoggerFactory {
     public init() { }
 
     public func produce(
         environment: Environment,
+        sessionManager: SessionManager,
         provider: LoggerProvider
     ) -> Logger {
-        let logEntryComposer = LogEntryComposerImpl()
         let consoleLogger = ConsoleLogger(
-            environment: environment,
-            composer: logEntryComposer
+            environment: environment
         )
         let fileLogger = FileLogger(
             provider: provider,
-            composer: logEntryComposer,
+            sessionManager: sessionManager,
             consoleLogger: consoleLogger
         )
 

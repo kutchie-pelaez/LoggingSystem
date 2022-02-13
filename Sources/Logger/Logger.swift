@@ -1,4 +1,6 @@
-public protocol Logger {
+import Core
+
+public protocol Logger: Finishable {
     func log(_ entry: LogEntry, to target: LogTarget)
 }
 
@@ -41,4 +43,6 @@ extension Logger {
             to: .all
         )
     }
+
+    public func logSessionEnding() { }
 }
