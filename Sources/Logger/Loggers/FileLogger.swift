@@ -4,6 +4,7 @@ import SessionManager
 
 private let logEnrtyTimeDateFormatter: DateFormatter = {
     let dateFormatter = DateFormatter()
+    dateFormatter.locale = Locale(identifier: "en_US")
     dateFormatter.dateFormat = "HH:mm:ss"
     dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
 
@@ -12,6 +13,7 @@ private let logEnrtyTimeDateFormatter: DateFormatter = {
 
 private let sessionEndingDayDateFormatter: DateFormatter = {
     let dateFormatter = DateFormatter()
+    dateFormatter.locale = Locale(identifier: "en_US")
     dateFormatter.dateFormat = "MMMM d"
     dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
 
@@ -22,11 +24,14 @@ final class FileLogger: Logger {
     init(
         provider: LoggerProvider,
         sessionManager: SessionManager,
-        consoleLogger: Logger?
+        consoleLogger: Logger?,
+        currentDateResolver: @escaping Resolver<Date> = { .now }
     ) {
         self.provider = provider
         self.sessionManager = sessionManager
         self.consoleLogger = consoleLogger
+        self.currentDateResolver = currentDateResolver
+        startDate = currentDateResolver()
         createEmptyLogsFileIfNeeded(at: provider.logsURL)
     }
 
@@ -37,12 +42,13 @@ final class FileLogger: Logger {
     private let provider: LoggerProvider
     private let sessionManager: SessionManager
     private let consoleLogger: Logger?
+    private let currentDateResolver: Resolver<Date>
 
     private let fileManager = FileManager.default
 
     private var sessionParams: [String] {
         [
-            "Date: \(sessionEndingDayDateFormatter.string(from: .now))",
+            "Date: \(sessionEndingDayDateFormatter.string(from: currentDateResolver()))",
             "Session: \(sessionManager.session)",
             "Time spent: \(hoursDiff):\(minutesDiff):\(secondsDiff)",
         ] + provider.sessionAdditionalParams
@@ -50,28 +56,28 @@ final class FileLogger: Logger {
 
     // MARK: - Diff
 
-    private let startDate = Date()
+    private let startDate: Date
     private var timeDiffComponents: DateComponents {
         Calendar.current.dateComponents(
             [.hour, .minute, .second],
             from: startDate,
-            to: .now
+            to: currentDateResolver()
         )
     }
     private var hoursDiff: String {
         guard let hour = timeDiffComponents.hour else { return "00" }
 
-        return String(hour)
+        return hour < 10 ? "0" + String(hour) : String(hour)
     }
     private var minutesDiff: String {
         guard let minute = timeDiffComponents.minute else { return "00" }
 
-        return String(minute)
+        return minute < 10 ? "0" + String(minute) : String(minute)
     }
     private var secondsDiff: String {
         guard let second = timeDiffComponents.second else { return "00" }
 
-        return String(second)
+        return second < 10 ? "0" + String(second) : String(second)
     }
 
     // MARK: - Handle
@@ -91,7 +97,7 @@ final class FileLogger: Logger {
         if fileManager.fileExists(atPath: url.path) {
             let attributes = try? fileManager.attributesOfItem(atPath: url.path)
             if (attributes?[.size] as? Int) != 0 {
-                write("\n")
+                write("\n\n")
             }
         } else {
             do {
@@ -161,14 +167,10 @@ final class FileLogger: Logger {
     private var boxCurrentTopLineWidth = 2
 
     private func writeEmptyBoxTopBound() {
-        do {
-            try handle?.seekToEnd()
-            try handle?.write(contentsOf: "╭".utf8Data)
-            boxTopLineOffset = try handle?.offset()
-            try handle?.write(contentsOf: "╮".utf8Data)
-        } catch {
-            safeCrash()
-        }
+        write("╭")
+        boxTopLineOffset = try? handle?.offset()
+        write("╮")
+        write("\n")
     }
 
     private var boxWidth: Int {
@@ -215,6 +217,7 @@ final class FileLogger: Logger {
         write("┬")
         write(line(boxWidth - footerWidth - 1))
         write("╯")
+        write("\n")
     }
 
     private func writeFooter() {
@@ -228,11 +231,11 @@ final class FileLogger: Logger {
             line.append(space(footerWidth - 2 - param.count - 1))
             line.append("│")
             write(line)
+            write("\n")
         }
 
         let footerBottomLine = "╰" + line(footerWidth - 2) + "╯"
         write(footerBottomLine)
-        write("\n")
     }
 
     // MARK: - Logger
@@ -247,9 +250,16 @@ final class FileLogger: Logger {
             widestDomain = entry.domain.name
         }
 
+        if
+            widestMessage.isNil ||
+            entry.message.count > widestMessage!.count
+        {
+            widestMessage = entry.message
+        }
+
         let message = "│" +
             " " +
-            logEnrtyTimeDateFormatter.string(from: .now) +
+            logEnrtyTimeDateFormatter.string(from: currentDateResolver()) +
             " " +
             "[" +
             entry.domain.name +

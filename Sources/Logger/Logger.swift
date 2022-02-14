@@ -43,6 +43,4 @@ extension Logger {
             to: .all
         )
     }
-
-    public func logSessionEnding() { }
 }
