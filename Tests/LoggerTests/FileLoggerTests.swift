@@ -137,7 +137,26 @@ final class LoggerTests: XCTestCase {
         Self.cleanup()
     }
 
-    func test4_withWarningsAndErrors() {
+    func test4_withBoxEqualToFooter() {
+        _currentDate = testDate(shiftedBy: 0)
+        subject = makeSubject()
+
+        subject.log("Message", domain: .domain)
+        sessionManagerMock.underlyingSession = 1
+        loggerProviderMock.underlyingSessionAdditionalParams = [
+            "Some parameter 123456789012"
+        ]
+        subject.finish()
+
+        XCTAssertEqual(
+            logs,
+            FileLoggerExpectations.logsWithBoxEqualToFooter
+        )
+
+        Self.cleanup()
+    }
+
+    func test5_withWarningsAndErrors() {
         _currentDate = testDate(shiftedBy: 0)
         subject = makeSubject()
 
@@ -158,7 +177,7 @@ final class LoggerTests: XCTestCase {
         Self.cleanup()
     }
 
-    func test5_withManySessions() {
+    func test6_withManySessions() {
         _currentDate = testDate(shiftedBy: 0)
         subject = makeSubject()
         subject.log("Message", domain: .domain)

@@ -9,7 +9,6 @@ enum FileLoggerExpectations {
     │ Session: 1           │
     │ Time spent: 02:45:01 │
     ╰──────────────────────╯
-
     """
 
     static let logsWithAdditionalParameters = """
@@ -23,7 +22,6 @@ enum FileLoggerExpectations {
     │ Some parameter 2           │
     │ Some really long parameter │
     ╰────────────────────────────╯
-
     """
 
     static let logsWithBoxNarrowerThanFooter = """
@@ -35,20 +33,29 @@ enum FileLoggerExpectations {
     │ Time spent: 00:00:00              │
     │ Some really really long parameter │
     ╰───────────────────────────────────╯
+    """
 
+    static let logsWithBoxEqualToFooter = """
+    ╭─────────────────────────────╮
+    │ 12:00:00 [domain]   Message │
+    ├─────────────────────────────┤
+    │ Date: January 1             │
+    │ Session: 1                  │
+    │ Time spent: 00:00:00        │
+    │ Some parameter 123456789012 │
+    ╰─────────────────────────────╯
     """
 
     static let logsWithWarningsAndErrors = """
     ╭──────────────────────────────╮
     │ 12:00:00 [log]       Message │
-    │ 12:00:00 [warning]   Message │ 🟡 FileLoggerTests::test4_withWarningsAndErrors 146
-    │ 12:00:00 [error]     Message │ 🔴 FileLoggerTests::test4_withWarningsAndErrors 148
+    │ 12:00:00 [warning]   Warning │ 🟡 FileLoggerTests::test5_withWarningsAndErrors() 165
+    │ 12:00:00 [error]     Error   │ 🔴 FileLoggerTests::test5_withWarningsAndErrors() 167
     ├──────────────────────┬───────╯
     │ Date: January 1      │
     │ Session: 1           │
     │ Time spent: 00:00:00 │
     ╰──────────────────────╯
-
     """
 
     static let logsWithManySessions = """
@@ -69,12 +76,11 @@ enum FileLoggerExpectations {
     ╰──────────────────────╯
 
     ╭─────────────────────────────╮
-    │ 01:47:21 [domain]   Message │
+    │ 12:00:00 [domain]   Message │
     ├──────────────────────┬──────╯
     │ Date: January 10     │
     │ Session: 3           │
     │ Time spent: 05:00:00 │
     ╰──────────────────────╯
-
     """
 }

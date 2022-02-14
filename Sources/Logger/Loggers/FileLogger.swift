@@ -36,7 +36,8 @@ final class FileLogger: Logger {
     }
 
     deinit {
-        try? handle?.close()
+        try? readingHandle?.close()
+        try? writingHandle?.close()
     }
 
     private let provider: LoggerProvider
@@ -80,17 +81,20 @@ final class FileLogger: Logger {
         return second < 10 ? "0" + String(second) : String(second)
     }
 
-    // MARK: - Handle
+    // MARK: - Handles
 
-    private lazy var handle: FileHandle? = {
-        let logsURL = provider.logsURL
+    private lazy var readingHandle: FileHandle? = {
+        safeUndefinedIfNil(
+            try? FileHandle(forReadingFrom: provider.logsURL),
+            nil
+        )
+    }()
 
-        guard let handle = try? FileHandle(forWritingTo: logsURL) else {
-            safeCrash()
-            return nil
-        }
-
-        return handle
+    private lazy var writingHandle: FileHandle? = {
+        safeUndefinedIfNil(
+            try? FileHandle(forWritingTo: provider.logsURL),
+            nil
+        )
     }()
 
     private func createEmptyLogsFileIfNeeded(at url: URL) {
@@ -107,7 +111,6 @@ final class FileLogger: Logger {
                     encoding: .utf8
                 )
             } catch {
-                print(error)
                 consoleLogger?.error(
                     "Failed to create empty logs file at \(url.path)",
                     domain: .fileLogger
@@ -116,7 +119,9 @@ final class FileLogger: Logger {
             }
         }
 
-        writeEmptyBoxTopBound()
+        startOffset = try? writingHandle?.offset()
+        write(boxTopBound)
+        write("\n")
     }
 
     // MARK: - Writing
@@ -124,12 +129,12 @@ final class FileLogger: Logger {
     private func write(_ string: String, offset: UInt64? = nil) {
         do {
             if let offset = offset {
-                try handle?.seek(toOffset: offset)
+                try writingHandle?.seek(toOffset: offset)
             } else {
-                try handle?.seekToEnd()
+                try writingHandle?.seekToEnd()
             }
 
-            try handle?.write(contentsOf: string.utf8Data)
+            try writingHandle?.write(contentsOf: string.utf8Data)
         } catch {
             safeCrash("Failed to write \(string) string \(offset.isNil ? "to the end of logs" : "with \(offset!) offset")")
         }
@@ -143,6 +148,16 @@ final class FileLogger: Logger {
                 .max()!,
             0
         )
+    }
+
+    private func filename(from file: String) -> String {
+        file.split(separator: "/")
+            .last
+            .orEmpty
+            .replacingOccurrences(
+                of: ".swift",
+                with: ""
+            )
     }
 
     private func space(_ count: Int) -> String {
@@ -163,15 +178,8 @@ final class FileLogger: Logger {
     private var widestDomain: String?
     private var widestMessage: String?
 
-    private var boxTopLineOffset: UInt64?
+    private var startOffset: UInt64?
     private var boxCurrentTopLineWidth = 2
-
-    private func writeEmptyBoxTopBound() {
-        write("╭")
-        boxTopLineOffset = try? handle?.offset()
-        write("╮")
-        write("\n")
-    }
 
     private var boxWidth: Int {
         1 + // left bound
@@ -187,37 +195,168 @@ final class FileLogger: Logger {
         1 // right bound
     }
 
-    private func updateBoxTopBound() {
+    private var boxTopBound: String {
+        "╭" + line(boxWidth - 2) + "╮"
+    }
+
+    private func syncAlignment() {
+        guard let startOffset = startOffset else {
+            return
+        }
+
+        try? readingHandle?.seek(toOffset: startOffset)
+
         guard
-            let boxTopLineOffset = boxTopLineOffset,
-            boxCurrentTopLineWidth < boxWidth
+            let currentData = try? readingHandle?.readToEnd(),
+            let currentString = String(data: currentData, encoding: .utf8)
         else {
             return
         }
 
-        write(
-            line(boxWidth - boxCurrentTopLineWidth),
-            offset: boxTopLineOffset
-        )
-    }
+        let currentLines = currentString
+            .split(separator: "\n")
+            .map(String.init)
+        var newLines = [String]()
 
-    private func updateMessagesAlignment() {
+        for var currentLine in currentLines {
+            if currentLine.starts(with: "╭") {
+                newLines.append(boxTopBound)
+            } else {
+                domainAlignment:
+                do {
+                    guard
+                        let widestDomain = widestDomain,
+                        let domainOpeningBracketIndex = currentLine.firstIndex(of: "["),
+                        let domainClosingBracketIndex = currentLine.firstIndex(of: "]")
+                    else {
+                        break domainAlignment
+                    }
 
-    }
+                    let currentDomain = currentLine[
+                        currentLine.index(after: domainOpeningBracketIndex)
+                        ...
+                        currentLine.index(before: domainClosingBracketIndex)
+                    ]
 
-    private func updateBoxRightBoundAlignment() {
+                    let diff = widestDomain.count - currentDomain.count
+                    if diff > 0 {
+                        let requiredNumberOfSpaces = diff + 3
+                        var numberOfCurrentSpaces = 0
+                        for index in currentLine.indices {
+                            guard index > domainClosingBracketIndex else { continue }
+                            guard currentLine[index] == " " else { break }
 
+                            numberOfCurrentSpaces += 1
+                        }
+
+                        if numberOfCurrentSpaces < requiredNumberOfSpaces {
+                            currentLine.insert(
+                                contentsOf: space(requiredNumberOfSpaces - numberOfCurrentSpaces),
+                                at: currentLine.index(after: domainClosingBracketIndex)
+                            )
+                        }
+                    }
+                }
+
+                messageAlignment:
+                do {
+                    guard
+                        let widestMessage = widestMessage,
+                        let domainClosingBracketIndex = currentLine.firstIndex(of: "]"),
+                        let boundIndex = currentLine.lastIndex(of: "│")
+                    else {
+                        break messageAlignment
+                    }
+
+                    var messageStaringIndex: String.Index?
+                    for index in currentLine.indices {
+                        guard index > domainClosingBracketIndex else { continue }
+
+                        if currentLine[index] == " " {
+                            continue
+                        } else {
+                            messageStaringIndex = index
+                            break
+                        }
+                    }
+
+                    var messageEndingIndex: String.Index?
+                    for index in currentLine.indices.reversed() {
+                        guard index < boundIndex else { continue }
+
+                        if currentLine[index] == " " {
+                            continue
+                        } else {
+                            messageEndingIndex = index
+                            break
+                        }
+                    }
+
+                    guard
+                        let messageStaringIndex = messageStaringIndex,
+                        let messageEndingIndex = messageEndingIndex
+                    else {
+                        break messageAlignment
+                    }
+
+                    let currentMessage = currentLine[messageStaringIndex...messageEndingIndex]
+                    let diff = widestMessage.count - currentMessage.count
+
+                    if diff > 0 {
+                        let requiredNumberOfSpaces = diff + 1
+                        var numberOfCurrentSpaces = 0
+                        for index in currentLine.indices {
+                            guard index > messageEndingIndex else { continue }
+                            guard currentLine[index] == " " else { break }
+
+                            numberOfCurrentSpaces += 1
+                        }
+
+                        if numberOfCurrentSpaces < requiredNumberOfSpaces {
+                            currentLine.insert(
+                                contentsOf: space(requiredNumberOfSpaces - numberOfCurrentSpaces),
+                                at: currentLine.index(before: boundIndex)
+                            )
+                        }
+                    }
+                }
+
+                newLines.append(currentLine)
+            }
+        }
+
+        try? writingHandle?.truncate(atOffset: startOffset)
+
+        for newLine in newLines {
+            write(newLine)
+            write("\n")
+        }
     }
 
     private func writeBoxBottomBound() {
         let footerWidth = footerWidth(from: sessionParams)
+        let boxWidth = self.boxWidth
 
-        write("├")
-        write(line(footerWidth - 2))
-        write("┬")
-        write(line(boxWidth - footerWidth - 1))
-        write("╯")
-        write("\n")
+        if footerWidth < boxWidth {
+            write("├")
+            write(line(footerWidth - 2))
+            write("┬")
+            write(line(boxWidth - footerWidth - 1))
+            write("╯")
+            write("\n")
+        } else if footerWidth == boxWidth {
+            write("├")
+            write(line(boxWidth - 2))
+            write("┤")
+            write("\n")
+        } else {
+            write("├")
+            write(line(boxWidth - 2))
+            write("┴")
+            write(line(footerWidth - boxWidth - 1))
+            write("╮")
+            write("\n")
+        }
     }
 
     private func writeFooter() {
@@ -257,20 +396,30 @@ final class FileLogger: Logger {
             widestMessage = entry.message
         }
 
-        let message = "│" +
+        var message = "│" +
             " " +
             logEnrtyTimeDateFormatter.string(from: currentDateResolver()) +
             " " +
             "[" +
             entry.domain.name +
             "]" +
-            " " +
+            "   " +
             entry.message +
             " " +
             "│"
 
+        if
+            let symbol = entry.level.symbol,
+            let file = entry.file,
+            let function = entry.function,
+            let line = entry.line
+        {
+            message.append(" \(symbol) \(filename(from: file))::\(function) \(line)")
+        }
+
         write(message)
         write("\n")
+        syncAlignment()
     }
 
     func finish() {

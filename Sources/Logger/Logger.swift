@@ -18,11 +18,20 @@ extension Logger {
         )
     }
 
-    public func warning(_ message: String, domain: LogDomain) {
+    public func warning(
+        _ message: String,
+        domain: LogDomain,
+        file: String = #file,
+        function: String = #function,
+        line: Int = #line
+    ) {
         let entry = LogEntry(
             message: message,
             level: .warning,
-            domain: domain
+            domain: domain,
+            file: file,
+            function: function,
+            line: line
         )
 
         log(
@@ -31,11 +40,20 @@ extension Logger {
         )
     }
 
-    public func error(_ message: String, domain: LogDomain) {
+    public func error(
+        _ message: String,
+        domain: LogDomain,
+        file: String = #file,
+        function: String = #function,
+        line: Int = #line
+    ) {
         let entry = LogEntry(
             message: message,
             level: .error,
-            domain: domain
+            domain: domain,
+            file: file,
+            function: function,
+            line: line
         )
 
         log(
