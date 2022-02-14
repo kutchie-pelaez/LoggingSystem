@@ -56,5 +56,13 @@ let package = Package(
                 .product(name: "Yams", package: "Yams")
             ]
         ),
+        .testTarget(
+            name: "LoggerTests",
+            dependencies: [
+                .product(name: "Core", package: "Core"),
+                .product(name: "SessionManager", package: "SessionManager"),
+                .target(name: "Logger")
+            ]
+        )
     ]
 )

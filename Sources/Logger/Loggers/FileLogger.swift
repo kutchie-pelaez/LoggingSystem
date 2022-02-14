@@ -89,7 +89,10 @@ final class FileLogger: Logger {
 
     private func createEmptyLogsFileIfNeeded(at url: URL) {
         if fileManager.fileExists(atPath: url.path) {
-            write("\n")
+            let attributes = try? fileManager.attributesOfItem(atPath: url.path)
+            if (attributes?[.size] as? Int) != 0 {
+                write("\n")
+            }
         } else {
             do {
                 try "".write(
@@ -98,6 +101,7 @@ final class FileLogger: Logger {
                     encoding: .utf8
                 )
             } catch {
+                print(error)
                 consoleLogger?.error(
                     "Failed to create empty logs file at \(url.path)",
                     domain: .fileLogger
