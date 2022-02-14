@@ -11,5 +11,7 @@ struct LoggerImpl: Logger {
         loggers.forEach { $0.log(entry, to: target) }
     }
     
-    func finish() { }
+    func finish() {
+        loggers.forEach { $0.finish() }
+    }
 }
