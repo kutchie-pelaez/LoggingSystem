@@ -74,6 +74,7 @@ final class LoggerTests: XCTestCase {
 
     func test1_withDifferentDomainsAndMessages() {
         _currentDate = testDate(shiftedBy: 0)
+        sessionManagerMock.underlyingSession = 1
         subject = makeSubject()
 
         _currentDate = testDate(shiftedBy: 0)
@@ -85,10 +86,6 @@ final class LoggerTests: XCTestCase {
         _currentDate = testDate(shiftedBy: .hour + .minutes(40) + .second)
         subject.log("Really really long message", domain: .shortDomain)
 
-        _currentDate = testDate(shiftedBy: .hours(2) + .minutes(45) + .second)
-        sessionManagerMock.underlyingSession = 1
-        subject.finish()
-
         XCTAssertEqual(
             logs,
             FileLoggerExpectations.logsWithDifferentDomainsAndMessages
@@ -99,16 +96,15 @@ final class LoggerTests: XCTestCase {
 
     func test2_withAdditionalParameters() {
         _currentDate = testDate(shiftedBy: 0)
-        subject = makeSubject()
-
-        subject.log("Message", domain: .domain)
         sessionManagerMock.underlyingSession = 1
         loggerProviderMock.underlyingSessionAdditionalParams = [
             "Some parameter 1",
             "Some parameter 2",
             "Some really long parameter"
         ]
-        subject.finish()
+        subject = makeSubject()
+
+        subject.log("Message", domain: .domain)
 
         XCTAssertEqual(
             logs,
@@ -120,14 +116,13 @@ final class LoggerTests: XCTestCase {
 
     func test3_withBoxNarrowerThanFooter() {
         _currentDate = testDate(shiftedBy: 0)
-        subject = makeSubject()
-
-        subject.log("Message", domain: .domain)
         sessionManagerMock.underlyingSession = 1
         loggerProviderMock.underlyingSessionAdditionalParams = [
             "Some really really long parameter"
         ]
-        subject.finish()
+        subject = makeSubject()
+
+        subject.log("Message", domain: .domain)
 
         XCTAssertEqual(
             logs,
@@ -139,14 +134,13 @@ final class LoggerTests: XCTestCase {
 
     func test4_withBoxEqualToFooter() {
         _currentDate = testDate(shiftedBy: 0)
-        subject = makeSubject()
-
-        subject.log("Message", domain: .domain)
         sessionManagerMock.underlyingSession = 1
         loggerProviderMock.underlyingSessionAdditionalParams = [
             "Some parameter 123456789012"
         ]
-        subject.finish()
+        subject = makeSubject()
+
+        subject.log("Message", domain: .domain)
 
         XCTAssertEqual(
             logs,
@@ -158,6 +152,7 @@ final class LoggerTests: XCTestCase {
 
     func test5_withWarningsAndErrors() {
         _currentDate = testDate(shiftedBy: 0)
+        sessionManagerMock.underlyingSession = 1
         subject = makeSubject()
 
         subject.log("Message", domain: .log)
@@ -165,9 +160,6 @@ final class LoggerTests: XCTestCase {
         subject.warning("Warning", domain: .warning)
 
         subject.error("Error", domain: .error)
-
-        sessionManagerMock.underlyingSession = 1
-        subject.finish()
 
         XCTAssertEqual(
             logs,
@@ -179,25 +171,22 @@ final class LoggerTests: XCTestCase {
 
     func test6_withManySessions() {
         _currentDate = testDate(shiftedBy: 0)
+        sessionManagerMock.underlyingSession = 1
         subject = makeSubject()
         subject.log("Message", domain: .domain)
-        _currentDate = testDate(shiftedBy: .hour)
-        sessionManagerMock.underlyingSession = 1
-        subject.finish()
+        subject = nil
 
         _currentDate = testDate(shiftedBy: .days(3))
+        sessionManagerMock.underlyingSession = 2
         subject = makeSubject()
         subject.log("Message", domain: .domain)
-        _currentDate = testDate(shiftedBy: .days(3) + .hours(3))
-        sessionManagerMock.underlyingSession = 2
-        subject.finish()
+        subject = nil
 
         _currentDate = testDate(shiftedBy: .days(9))
+        sessionManagerMock.underlyingSession = 3
         subject = makeSubject()
         subject.log("Message", domain: .domain)
-        _currentDate = testDate(shiftedBy: .days(9) + .hours(5))
-        sessionManagerMock.underlyingSession = 3
-        subject.finish()
+        subject = nil
 
         XCTAssertEqual(
             logs,

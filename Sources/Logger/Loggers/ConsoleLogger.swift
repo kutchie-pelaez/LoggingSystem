@@ -33,8 +33,6 @@ struct ConsoleLogger: Logger {
 
         print(message)
     }
-
-    func finish() { }
 }
 
 extension String {

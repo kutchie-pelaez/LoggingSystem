@@ -31,8 +31,7 @@ final class FileLogger: Logger {
         self.sessionManager = sessionManager
         self.consoleLogger = consoleLogger
         self.currentDateResolver = currentDateResolver
-        startDate = currentDateResolver()
-        createEmptyLogsFileIfNeeded(at: provider.logsURL)
+        setInitialState(at: provider.logsURL)
     }
 
     deinit {
@@ -50,35 +49,8 @@ final class FileLogger: Logger {
     private var sessionParams: [String] {
         [
             "Date: \(sessionEndingDayDateFormatter.string(from: currentDateResolver()))",
-            "Session: \(sessionManager.session)",
-            "Time spent: \(hoursDiff):\(minutesDiff):\(secondsDiff)",
+            "Session: \(sessionManager.session)"
         ] + provider.sessionAdditionalParams
-    }
-
-    // MARK: - Diff
-
-    private let startDate: Date
-    private var timeDiffComponents: DateComponents {
-        Calendar.current.dateComponents(
-            [.hour, .minute, .second],
-            from: startDate,
-            to: currentDateResolver()
-        )
-    }
-    private var hoursDiff: String {
-        guard let hour = timeDiffComponents.hour else { return "00" }
-
-        return hour < 10 ? "0" + String(hour) : String(hour)
-    }
-    private var minutesDiff: String {
-        guard let minute = timeDiffComponents.minute else { return "00" }
-
-        return minute < 10 ? "0" + String(minute) : String(minute)
-    }
-    private var secondsDiff: String {
-        guard let second = timeDiffComponents.second else { return "00" }
-
-        return second < 10 ? "0" + String(second) : String(second)
     }
 
     // MARK: - Handles
@@ -97,11 +69,11 @@ final class FileLogger: Logger {
         )
     }()
 
-    private func createEmptyLogsFileIfNeeded(at url: URL) {
+    private func setInitialState(at url: URL) {
         if fileManager.fileExists(atPath: url.path) {
             let attributes = try? fileManager.attributesOfItem(atPath: url.path)
             if (attributes?[.size] as? Int) != 0 {
-                write("\n\n")
+                write("\n")
             }
         } else {
             do {
@@ -119,6 +91,7 @@ final class FileLogger: Logger {
             }
         }
 
+        writeHeader()
         startOffset = try? writingHandle?.offset()
         write(boxTopBound)
         write("\n")
@@ -140,7 +113,7 @@ final class FileLogger: Logger {
         }
     }
 
-    private func footerWidth(from params: [String]) -> Int {
+    private func headerWidth(from params: [String]) -> Int {
         safeUndefinedIfNil(
             params
                 .map(\.count)
@@ -196,7 +169,30 @@ final class FileLogger: Logger {
     }
 
     private var boxTopBound: String {
-        "╭" + line(boxWidth - 2) + "╮"
+        let headerWidth = headerWidth(from: sessionParams)
+        let boxWidth = self.boxWidth
+
+        var result = ""
+
+        if headerWidth < boxWidth {
+            result.append("├")
+            result.append(line(headerWidth - 2))
+            result.append("┴")
+            result.append(line(boxWidth - headerWidth - 1))
+            result.append("╮")
+        } else if headerWidth == boxWidth {
+            result.append("├")
+            result.append(line(boxWidth - 2))
+            result.append("┤")
+        } else {
+            result.append("├")
+            result.append(line(boxWidth - 2))
+            result.append("┬")
+            result.append(line(headerWidth - boxWidth - 1))
+            result.append("╯")
+        }
+
+        return result
     }
 
     private func syncAlignment() {
@@ -219,7 +215,9 @@ final class FileLogger: Logger {
         var newLines = [String]()
 
         for var currentLine in currentLines {
-            if currentLine.starts(with: "╭") {
+            guard !currentLine.starts(with: "╰") else { continue }
+
+            if currentLine.starts(with: "├") {
                 newLines.append(boxTopBound)
             } else {
                 domainAlignment:
@@ -327,54 +325,33 @@ final class FileLogger: Logger {
 
         try? writingHandle?.truncate(atOffset: startOffset)
 
+        newLines.append(boxBottomBound)
         for newLine in newLines {
             write(newLine)
             write("\n")
         }
     }
 
-    private func writeBoxBottomBound() {
-        let footerWidth = footerWidth(from: sessionParams)
-        let boxWidth = self.boxWidth
-
-        if footerWidth < boxWidth {
-            write("├")
-            write(line(footerWidth - 2))
-            write("┬")
-            write(line(boxWidth - footerWidth - 1))
-            write("╯")
-            write("\n")
-        } else if footerWidth == boxWidth {
-            write("├")
-            write(line(boxWidth - 2))
-            write("┤")
-            write("\n")
-        } else {
-            write("├")
-            write(line(boxWidth - 2))
-            write("┴")
-            write(line(footerWidth - boxWidth - 1))
-            write("╮")
-            write("\n")
-        }
+    private var boxBottomBound: String {
+        "╰" + line(boxWidth - 2) + "╯"
     }
 
-    private func writeFooter() {
+    private func writeHeader() {
         let params = sessionParams
-        let footerWidth = footerWidth(from: params)
+        let headerWidth = headerWidth(from: params)
+
+        write("╭" + line(headerWidth - 2) + "╮")
+        write("\n")
 
         for param in params {
             var line = "│"
             line.append(space(1))
             line.append(param)
-            line.append(space(footerWidth - 2 - param.count - 1))
+            line.append(space(headerWidth - 2 - param.count - 1))
             line.append("│")
             write(line)
             write("\n")
         }
-
-        let footerBottomLine = "╰" + line(footerWidth - 2) + "╯"
-        write(footerBottomLine)
     }
 
     // MARK: - Logger
@@ -396,17 +373,9 @@ final class FileLogger: Logger {
             widestMessage = entry.message
         }
 
-        var message = "│" +
-            " " +
-            logEnrtyTimeDateFormatter.string(from: currentDateResolver()) +
-            " " +
-            "[" +
-            entry.domain.name +
-            "]" +
-            "   " +
-            entry.message +
-            " " +
-            "│"
+        let date = logEnrtyTimeDateFormatter.string(from: currentDateResolver())
+        let domain = entry.domain.name
+        var message = "│ \(date) [\(domain)]   \(entry.message) │"
 
         if
             let symbol = entry.level.symbol,
@@ -420,11 +389,6 @@ final class FileLogger: Logger {
         write(message)
         write("\n")
         syncAlignment()
-    }
-
-    func finish() {
-        writeBoxBottomBound()
-        writeFooter()
     }
 }
 

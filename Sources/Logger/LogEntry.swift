@@ -31,7 +31,7 @@ public struct LogEntry {
         self.line = nil
     }
 
-    internal init(
+    init(
         message: String,
         level: Level,
         domain: LogDomain,

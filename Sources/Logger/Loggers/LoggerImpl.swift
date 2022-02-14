@@ -10,8 +10,4 @@ struct LoggerImpl: Logger {
     func log(_ entry: LogEntry, to target: LogTarget) {
         loggers.forEach { $0.log(entry, to: target) }
     }
-    
-    func finish() {
-        loggers.forEach { $0.finish() }
-    }
 }

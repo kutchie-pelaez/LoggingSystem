@@ -1,6 +1,6 @@
 import Core
 
-public protocol Logger: Finishable {
+public protocol Logger {
     func log(_ entry: LogEntry, to target: LogTarget)
 }
 
