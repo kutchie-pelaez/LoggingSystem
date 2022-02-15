@@ -31,6 +31,7 @@ let package = Package(
         .package(name: "Core", url: "https://github.com/kutchie-pelaez-packages/Core.git", .branch("master")),
         .package(name: "DeviceKit", url: "https://github.com/kutchie-pelaez-packages/DeviceKit.git", .branch("master")),
         .package(name: "SessionManager", url: "https://github.com/kutchie-pelaez-packages/SessionManager.git", .branch("master")),
+        .package(name: "Tweaks", url: "https://github.com/kutchie-pelaez-packages/Tweaks.git", .branch("master")),
         .package(name: "Yams", url: "https://github.com/jpsim/Yams.git", from: "4.0.6")
     ],
     targets: [
@@ -61,6 +62,7 @@ let package = Package(
             dependencies: [
                 .product(name: "Core", package: "Core"),
                 .product(name: "SessionManager", package: "SessionManager"),
+                .product(name: "Tweak", package: "Tweaks"),
                 .target(name: "Logger")
             ]
         )

@@ -1,6 +1,7 @@
 @testable import Logger
 import Core
 import SessionManager
+import Tweak
 import XCTest
 
 private let loggerTestsURL = URL(fileURLWithPath: #file)
@@ -209,8 +210,8 @@ extension LogDomain {
 private final class SessionManagerMock: SessionManager {
     var underlyingSession = 0
 
-    var session: Int { underlyingSession }
-    func start() { }
+    func receive(_ tweak: Tweak) { }
+    var sessionValueSubject: ValueSubject<Int> { MutableValueSubject(underlyingSession) }
 }
 
 private final class LoggerProviderMock: LoggerProvider {

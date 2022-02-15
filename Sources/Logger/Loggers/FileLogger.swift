@@ -49,7 +49,7 @@ final class FileLogger: Logger {
     private var sessionParams: [String] {
         [
             "Date: \(sessionEndingDayDateFormatter.string(from: currentDateResolver()))",
-            "Session: \(sessionManager.session)"
+            "Session: \(sessionManager.sessionValueSubject.value)"
         ] + provider.sessionAdditionalParams
     }
 
