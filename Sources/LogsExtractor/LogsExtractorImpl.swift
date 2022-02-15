@@ -10,6 +10,6 @@ final class LogsExtractorImpl: LogsExtractor {
     // MARK: - LogsComposer
 
     func extract() throws -> Data {
-        fatalError()
+        try Data(contentsOf: provider.logsURL)
     }
 }
