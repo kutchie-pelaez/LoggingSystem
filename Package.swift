@@ -9,9 +9,9 @@ let package = Package(
     ],
     products: [
         .library(
-            name: "LogsComposer",
+            name: "LogsExtractor",
             targets: [
-                "LogsComposer"
+                "LogsExtractor"
             ]
         ),
         .library(
@@ -19,28 +19,20 @@ let package = Package(
             targets: [
                 "Logger"
             ]
-        ),
-        .library(
-            name: "Logs",
-            targets: [
-                "Logs"
-            ]
         )
     ],
     dependencies: [
         .package(name: "Core", url: "https://github.com/kutchie-pelaez-packages/Core.git", .branch("master")),
         .package(name: "DeviceKit", url: "https://github.com/kutchie-pelaez-packages/DeviceKit.git", .branch("master")),
         .package(name: "SessionManager", url: "https://github.com/kutchie-pelaez-packages/SessionManager.git", .branch("master")),
-        .package(name: "Tweaks", url: "https://github.com/kutchie-pelaez-packages/Tweaks.git", .branch("master")),
-        .package(name: "Yams", url: "https://github.com/jpsim/Yams.git", from: "4.0.6")
+        .package(name: "Tweaks", url: "https://github.com/kutchie-pelaez-packages/Tweaks.git", .branch("master"))
     ],
     targets: [
         .target(
-            name: "LogsComposer",
+            name: "LogsExtractor",
             dependencies: [
                 .product(name: "Core", package: "Core"),
-                .product(name: "DeviceKit", package: "DeviceKit"),
-                .target(name: "Logs")
+                .product(name: "DeviceKit", package: "DeviceKit")
             ]
         ),
         .target(
@@ -48,13 +40,6 @@ let package = Package(
             dependencies: [
                 .product(name: "Core", package: "Core"),
                 .product(name: "SessionManager", package: "SessionManager")
-            ]
-        ),
-        .target(
-            name: "Logs",
-            dependencies: [
-                .product(name: "Core", package: "Core"),
-                .product(name: "Yams", package: "Yams")
             ]
         ),
         .testTarget(
