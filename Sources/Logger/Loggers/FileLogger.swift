@@ -138,7 +138,7 @@ final class FileLogger: Logger {
     }
 
     private func line(_ count: Int) -> String {
-        repeating("─", count)
+        repeating("-", count)
     }
 
     private func repeating(_ string: String, _ count: Int) -> String {
@@ -175,21 +175,21 @@ final class FileLogger: Logger {
         var result = ""
 
         if headerWidth < boxWidth {
-            result.append("├")
+            result.append("+")
             result.append(line(headerWidth - 2))
-            result.append("┴")
+            result.append("+")
             result.append(line(boxWidth - headerWidth - 1))
-            result.append("╮")
+            result.append("+")
         } else if headerWidth == boxWidth {
-            result.append("├")
+            result.append("+")
             result.append(line(boxWidth - 2))
-            result.append("┤")
+            result.append("+")
         } else {
-            result.append("├")
+            result.append("+")
             result.append(line(boxWidth - 2))
-            result.append("┬")
+            result.append("+")
             result.append(line(headerWidth - boxWidth - 1))
-            result.append("╯")
+            result.append("+")
         }
 
         return result
@@ -214,10 +214,8 @@ final class FileLogger: Logger {
             .map(String.init)
         var newLines = [String]()
 
-        for var currentLine in currentLines {
-            guard !currentLine.starts(with: "╰") else { continue }
-
-            if currentLine.starts(with: "├") {
+        for var (index, currentLine) in currentLines.enumerated() {
+            if index == 0 {
                 newLines.append(boxTopBound)
             } else {
                 domainAlignment:
@@ -261,7 +259,7 @@ final class FileLogger: Logger {
                     guard
                         let widestMessage = widestMessage,
                         let domainClosingBracketIndex = currentLine.firstIndex(of: "]"),
-                        let boundIndex = currentLine.lastIndex(of: "│")
+                        let boundIndex = currentLine.lastIndex(of: "|")
                     else {
                         break messageAlignment
                     }
@@ -333,22 +331,22 @@ final class FileLogger: Logger {
     }
 
     private var boxBottomBound: String {
-        "╰" + line(boxWidth - 2) + "╯"
+        "+" + line(boxWidth - 2) + "+"
     }
 
     private func writeHeader() {
         let params = sessionParams
         let headerWidth = headerWidth(from: params)
 
-        write("╭" + line(headerWidth - 2) + "╮")
+        write("+" + line(headerWidth - 2) + "+")
         write("\n")
 
         for param in params {
-            var line = "│"
+            var line = "|"
             line.append(space(1))
             line.append(param)
             line.append(space(headerWidth - 2 - param.count - 1))
-            line.append("│")
+            line.append("|")
             write(line)
             write("\n")
         }
@@ -375,7 +373,7 @@ final class FileLogger: Logger {
 
         let date = logEnrtyTimeDateFormatter.string(from: currentDateResolver())
         let domain = entry.domain.name
-        var message = "│ \(date) [\(domain)]   \(entry.message) │"
+        var message = "| \(date) [\(domain)]   \(entry.message) |"
 
         if
             let symbol = entry.level.symbol,
