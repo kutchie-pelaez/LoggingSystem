@@ -214,9 +214,11 @@ final class FileLogger: Logger {
             .map(String.init)
         var newLines = [String]()
 
-        for var (index, currentLine) in currentLines.enumerated() {
+        for (index, var currentLine) in currentLines.enumerated() {
             if index == 0 {
                 newLines.append(boxTopBound)
+            } else if currentLine.starts(with: "+") {
+                continue
             } else {
                 domainAlignment:
                 do {
