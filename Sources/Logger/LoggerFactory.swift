@@ -14,8 +14,7 @@ public struct LoggerFactory {
         )
         let fileLogger = FileLogger(
             provider: provider,
-            sessionManager: sessionManager,
-            consoleLogger: consoleLogger
+            sessionManager: sessionManager
         )
 
         return LoggerImpl(

@@ -2,36 +2,21 @@ import Core
 import Foundation
 import SessionManager
 
-private let logEnrtyTimeDateFormatter: DateFormatter = {
-    let dateFormatter = DateFormatter()
-    dateFormatter.locale = Locale(identifier: "en_US")
-    dateFormatter.dateFormat = "HH:mm:ss"
-    dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+protocol FileLoggerWriter {
+    func writeNewLine()
+    func writeHeader()
+    func writeMessage(_ message: String)
+    func updateWidestDomainIfNeeded(_ newDomain: String)
+    func updateWidestMessageIfNeeded(_ newMessage: String)
+}
 
-    return dateFormatter
-}()
-
-private let sessionEndingDayDateFormatter: DateFormatter = {
-    let dateFormatter = DateFormatter()
-    dateFormatter.locale = Locale(identifier: "en_US")
-    dateFormatter.dateFormat = "MMMM d"
-    dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
-
-    return dateFormatter
-}()
-
-final class FileLogger: Logger {
+final class FileLoggerWriterImpl: FileLoggerWriter {
     init(
-        provider: LoggerProvider,
-        sessionManager: SessionManager,
-        consoleLogger: Logger?,
-        currentDateResolver: @escaping Resolver<Date> = { .now }
+        logsURL: URL,
+        sessionParams: [String]
     ) {
-        self.provider = provider
-        self.sessionManager = sessionManager
-        self.consoleLogger = consoleLogger
-        self.currentDateResolver = currentDateResolver
-        setInitialState(at: provider.logsURL)
+        self.logsURL =  logsURL
+        self.sessionParams =  sessionParams
     }
 
     deinit {
@@ -39,65 +24,31 @@ final class FileLogger: Logger {
         try? writingHandle?.close()
     }
 
-    private let provider: LoggerProvider
-    private let sessionManager: SessionManager
-    private let consoleLogger: Logger?
-    private let currentDateResolver: Resolver<Date>
-
-    private let fileManager = FileManager.default
-
-    private var sessionParams: [String] {
-        [
-            "Date: \(sessionEndingDayDateFormatter.string(from: currentDateResolver()))",
-            "Session: \(sessionManager.sessionValueSubject.value)"
-        ] + provider.sessionAdditionalParams
-    }
-
-    // MARK: - Handles
+    private let logsURL: URL
+    private let sessionParams: [String]
 
     private lazy var readingHandle: FileHandle? = {
         safeUndefinedIfNil(
-            try? FileHandle(forReadingFrom: provider.logsURL),
+            try? FileHandle(forReadingFrom: logsURL),
             nil
         )
     }()
 
     private lazy var writingHandle: FileHandle? = {
         safeUndefinedIfNil(
-            try? FileHandle(forWritingTo: provider.logsURL),
+            try? FileHandle(forWritingTo: logsURL),
             nil
         )
     }()
 
-    private func setInitialState(at url: URL) {
-        if fileManager.fileExists(atPath: url.path) {
-            let attributes = try? fileManager.attributesOfItem(atPath: url.path)
-            if (attributes?[.size] as? Int) != 0 {
-                write("\n")
-            }
-        } else {
-            do {
-                try "".write(
-                    to: url,
-                    atomically: true,
-                    encoding: .utf8
-                )
-            } catch {
-                consoleLogger?.error(
-                    "Failed to create empty logs file at \(url.path)",
-                    domain: .fileLogger
-                )
-                safeCrash()
-            }
-        }
+    private var startingOffset: UInt64?
 
-        writeHeader()
-        startOffset = try? writingHandle?.offset()
-        write(boxTopBound)
-        write("\n")
-    }
+    private var widestDomain: String?
+    private var widestMessage: String?
 
-    // MARK: - Writing
+    private let queue = DispatchQueue(label: "com.kulikovia.Logging")
+
+    // MARK: -
 
     private func write(_ string: String, offset: UInt64? = nil) {
         do {
@@ -113,46 +64,17 @@ final class FileLogger: Logger {
         }
     }
 
-    private func headerWidth(from params: [String]) -> Int {
-        safeUndefinedIfNil(
-            params
-                .map(\.count)
-                .map { 2 + $0 + 2 }
-                .max()!,
-            0
-        )
-    }
-
-    private func filename(from file: String) -> String {
-        file.split(separator: "/")
-            .last
-            .orEmpty
-            .replacingOccurrences(
-                of: ".swift",
-                with: ""
-            )
-    }
-
     private func space(_ count: Int) -> String {
-        repeating(" ", count)
+        Array(repeating: " ", count: count).joined()
     }
 
     private func line(_ count: Int) -> String {
-        repeating("-", count)
+        Array(repeating: "-", count: count).joined()
     }
 
-    private func repeating(_ string: String, _ count: Int) -> String {
-        Array(
-            repeating: string,
-            count: count
-        ).joined()
+    private var headerWidth: Int {
+        sessionParams.map { 2 + $0.count + 2}.max()!
     }
-
-    private var widestDomain: String?
-    private var widestMessage: String?
-
-    private var startOffset: UInt64?
-    private var boxCurrentTopLineWidth = 2
 
     private var boxWidth: Int {
         1 + // left bound
@@ -168,10 +90,11 @@ final class FileLogger: Logger {
         1 // right bound
     }
 
-    private var boxTopBound: String {
-        let headerWidth = headerWidth(from: sessionParams)
-        let boxWidth = self.boxWidth
+    private var headerTopSide: String {
+        "+" + line(headerWidth - 2) + "+"
+    }
 
+    private var boxTopSide: String {
         var result = ""
 
         if headerWidth < boxWidth {
@@ -195,12 +118,16 @@ final class FileLogger: Logger {
         return result
     }
 
-    private func syncAlignment() {
-        guard let startOffset = startOffset else {
+    private var boxBottomSide: String {
+        "+" + line(boxWidth - 2) + "+"
+    }
+
+    private func syncMessagesAlignment() {
+        guard let startingOffset = startingOffset else {
             return
         }
 
-        try? readingHandle?.seek(toOffset: startOffset)
+        try? readingHandle?.seek(toOffset: startingOffset)
 
         guard
             let currentData = try? readingHandle?.readToEnd(),
@@ -216,7 +143,7 @@ final class FileLogger: Logger {
 
         for (index, var currentLine) in currentLines.enumerated() {
             if index == 0 {
-                newLines.append(boxTopBound)
+                newLines.append(boxTopSide)
             } else if currentLine.starts(with: "+") {
                 continue
             } else {
@@ -323,75 +250,55 @@ final class FileLogger: Logger {
             }
         }
 
-        try? writingHandle?.truncate(atOffset: startOffset)
+        try? writingHandle?.truncate(atOffset: startingOffset)
 
-        newLines.append(boxBottomBound)
+        newLines.append(boxBottomSide)
         for newLine in newLines {
             write(newLine)
             write("\n")
         }
     }
 
-    private var boxBottomBound: String {
-        "+" + line(boxWidth - 2) + "+"
+    // MARK: - FileLoggerWriter
+
+    func writeNewLine() {
+        write("\n")
     }
 
-    private func writeHeader() {
-        let params = sessionParams
-        let headerWidth = headerWidth(from: params)
+    func writeHeader() {
+        write(headerTopSide)
+        writeNewLine()
 
-        write("+" + line(headerWidth - 2) + "+")
-        write("\n")
+        for sessionParam in sessionParams {
+            let rightSpaces = space(headerWidth - 2 - sessionParam.count - 1)
+            let line = "| \(sessionParam)\(rightSpaces)|"
 
-        for param in params {
-            var line = "|"
-            line.append(space(1))
-            line.append(param)
-            line.append(space(headerWidth - 2 - param.count - 1))
-            line.append("|")
             write(line)
-            write("\n")
+            writeNewLine()
+        }
+
+        startingOffset = try? writingHandle?.offset()
+        write(boxTopSide)
+        writeNewLine()
+    }
+
+    func writeMessage(_ message: String) {
+        queue.sync {
+            write(message)
+            writeNewLine()
+            syncMessagesAlignment()
         }
     }
 
-    // MARK: - Logger
+    func updateWidestDomainIfNeeded(_ newDomain: String) {
+        guard widestDomain.isNil || newDomain.count > widestDomain!.count else { return }
 
-    func log(_ entry: LogEntry, to target: LogTarget) {
-        guard target.contains(.file) else { return }
-
-        if
-            widestDomain.isNil ||
-            entry.domain.name.count > widestDomain!.count
-        {
-            widestDomain = entry.domain.name
-        }
-
-        if
-            widestMessage.isNil ||
-            entry.message.count > widestMessage!.count
-        {
-            widestMessage = entry.message
-        }
-
-        let date = logEnrtyTimeDateFormatter.string(from: currentDateResolver())
-        let domain = entry.domain.name
-        var message = "| \(date) [\(domain)]   \(entry.message) |"
-
-        if
-            let symbol = entry.level.symbol,
-            let file = entry.file,
-            let function = entry.function,
-            let line = entry.line
-        {
-            message.append(" \(symbol) \(filename(from: file))::\(function) \(line)")
-        }
-
-        write(message)
-        write("\n")
-        syncAlignment()
+        widestDomain = newDomain
     }
-}
 
-extension LogDomain {
-    fileprivate static let fileLogger: Self = "fileLogger"
+    func updateWidestMessageIfNeeded(_ newMessage: String) {
+        guard widestMessage.isNil || newMessage.count > widestMessage!.count else { return }
+
+        widestMessage = newMessage
+    }
 }

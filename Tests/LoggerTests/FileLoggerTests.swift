@@ -37,9 +37,6 @@ final class LoggerTests: XCTestCase {
         FileLogger(
             provider: loggerProviderMock,
             sessionManager: sessionManagerMock,
-            consoleLogger: ConsoleLogger(
-                environment: .dev
-            ),
             currentDateResolver: currentDate
         )
     }

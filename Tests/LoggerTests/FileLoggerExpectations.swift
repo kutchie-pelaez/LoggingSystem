@@ -52,8 +52,8 @@ enum FileLoggerExpectations {
     | Session: 1      |
     +-----------------+------------+
     | 12:00:00 [log]       Message |
-    | 12:00:00 [warning]   Warning | 🟡 FileLoggerTests::test5_withWarningsAndErrors() 161
-    | 12:00:00 [error]     Error   | 🔴 FileLoggerTests::test5_withWarningsAndErrors() 163
+    | 12:00:00 [warning]   Warning | 🟡 FileLoggerTests::test5_withWarningsAndErrors() 158
+    | 12:00:00 [error]     Error   | 🔴 FileLoggerTests::test5_withWarningsAndErrors() 160
     +------------------------------+
 
     """
