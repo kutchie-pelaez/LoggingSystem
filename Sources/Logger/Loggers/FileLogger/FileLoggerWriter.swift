@@ -58,7 +58,7 @@ final class FileLoggerWriterImpl: FileLoggerWriter {
                 try writingHandle?.seekToEnd()
             }
 
-            try writingHandle?.write(contentsOf: string.utf8Data)
+            try writingHandle?.write(contentsOf: string.data)
         } catch {
             safeCrash("Failed to write \(string) string \(offset.isNil ? "to the end of logs" : "with \(offset!) offset")")
         }
