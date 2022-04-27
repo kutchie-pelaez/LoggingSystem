@@ -9,15 +9,21 @@ let package = Package(
     ],
     products: [
         .library(
-            name: "LogsExtractor",
+            name: "LoggerImpl",
             targets: [
-                "LogsExtractor"
+                "LoggerImpl"
             ]
         ),
         .library(
             name: "Logger",
             targets: [
                 "Logger"
+            ]
+        ),
+        .library(
+            name: "LogsExtractor",
+            targets: [
+                "LogsExtractor"
             ]
         )
     ],
@@ -29,10 +35,11 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "LogsExtractor",
+            name: "LoggerImpl",
             dependencies: [
                 .product(name: "Core", package: "Core"),
-                .product(name: "DeviceKit", package: "DeviceKit")
+                .product(name: "SessionManager", package: "SessionManager"),
+                .target(name: "Logger")
             ]
         ),
         .target(
@@ -42,12 +49,20 @@ let package = Package(
                 .product(name: "SessionManager", package: "SessionManager")
             ]
         ),
+        .target(
+            name: "LogsExtractor",
+            dependencies: [
+                .product(name: "Core", package: "Core"),
+                .product(name: "DeviceKit", package: "DeviceKit")
+            ]
+        ),
         .testTarget(
             name: "LoggerTests",
             dependencies: [
                 .product(name: "Core", package: "Core"),
                 .product(name: "SessionManager", package: "SessionManager"),
                 .product(name: "Tweak", package: "Tweaks"),
+                .target(name: "LoggerImpl"),
                 .target(name: "Logger")
             ]
         )

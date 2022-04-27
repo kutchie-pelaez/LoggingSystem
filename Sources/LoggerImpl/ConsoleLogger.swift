@@ -1,6 +1,6 @@
 import Core
 import Foundation
-import os
+import Logger
 
 private let dateFormatter: DateFormatter = {
     let dateFormatter = DateFormatter()
@@ -17,7 +17,7 @@ struct ConsoleLogger: Logger {
 
     // MARK: - Logger
 
-    func log(_ entry: LogEntry, to target: LogTarget) {
+    func log(_ entry: LoggingEntry, to target: LoggingTarget) {
         guard target.contains(.console) else { return }
 
         let datePart = dateFormatter.string(from: .now).braced
@@ -36,7 +36,5 @@ struct ConsoleLogger: Logger {
 }
 
 extension String {
-    fileprivate var braced: String {
-        "[\(self)]"
-    }
+    fileprivate var braced: String { "[\(self)]" }
 }

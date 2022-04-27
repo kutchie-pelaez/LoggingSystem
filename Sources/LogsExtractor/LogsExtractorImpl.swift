@@ -1,11 +1,11 @@
 import Foundation
 
 final class LogsExtractorImpl: LogsExtractor {
+    private let provider: LogsExtractorProvider
+
     init(provider: LogsExtractorProvider) {
         self.provider = provider
     }
-
-    private let provider: LogsExtractorProvider
 
     // MARK: - LogsComposer
 

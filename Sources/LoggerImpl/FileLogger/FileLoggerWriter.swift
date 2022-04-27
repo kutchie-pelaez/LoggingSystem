@@ -11,34 +11,15 @@ protocol FileLoggerWriter {
 }
 
 final class FileLoggerWriterImpl: FileLoggerWriter {
-    init(
-        logsURL: URL,
-        sessionParams: [String]
-    ) {
-        self.logsURL =  logsURL
-        self.sessionParams =  sessionParams
-    }
-
-    deinit {
-        try? readingHandle?.close()
-        try? writingHandle?.close()
-    }
-
     private let logsURL: URL
     private let sessionParams: [String]
 
     private lazy var readingHandle: FileHandle? = {
-        safeUndefinedIfNil(
-            try? FileHandle(forReadingFrom: logsURL),
-            nil
-        )
+        safeUndefinedIfNil(try? FileHandle(forReadingFrom: logsURL), nil)
     }()
 
     private lazy var writingHandle: FileHandle? = {
-        safeUndefinedIfNil(
-            try? FileHandle(forWritingTo: logsURL),
-            nil
-        )
+        safeUndefinedIfNil(try? FileHandle(forWritingTo: logsURL), nil)
     }()
 
     private var startingOffset: UInt64?
@@ -47,30 +28,6 @@ final class FileLoggerWriterImpl: FileLoggerWriter {
     private var widestMessage: String?
 
     private let queue = DispatchQueue(label: "com.kulikovia.Logging")
-
-    // MARK: -
-
-    private func write(_ string: String, offset: UInt64? = nil) {
-        do {
-            if let offset = offset {
-                try writingHandle?.seek(toOffset: offset)
-            } else {
-                try writingHandle?.seekToEnd()
-            }
-
-            try writingHandle?.write(contentsOf: string.data)
-        } catch {
-            safeCrash("Failed to write \(string) string \(offset.isNil ? "to the end of logs" : "with \(offset!) offset")")
-        }
-    }
-
-    private func space(_ count: Int) -> String {
-        Array(repeating: " ", count: count).joined()
-    }
-
-    private func line(_ count: Int) -> String {
-        Array(repeating: "-", count: count).joined()
-    }
 
     private var headerWidth: Int {
         sessionParams.map { 2 + $0.count + 2}.max()!
@@ -120,6 +77,41 @@ final class FileLoggerWriterImpl: FileLoggerWriter {
 
     private var boxBottomSide: String {
         "+" + line(boxWidth - 2) + "+"
+    }
+
+    init(
+        logsURL: URL,
+        sessionParams: [String]
+    ) {
+        self.logsURL =  logsURL
+        self.sessionParams =  sessionParams
+    }
+
+    deinit {
+        try? readingHandle?.close()
+        try? writingHandle?.close()
+    }
+
+    private func write(_ string: String, offset: UInt64? = nil) {
+        do {
+            if let offset = offset {
+                try writingHandle?.seek(toOffset: offset)
+            } else {
+                try writingHandle?.seekToEnd()
+            }
+
+            try writingHandle?.write(contentsOf: string.data)
+        } catch {
+            assertionFailure("Failed to write \(string) string \(offset.isNil ? "to the end of logs" : "with \(offset!) offset")")
+        }
+    }
+
+    private func space(_ count: Int) -> String {
+        Array(repeating: " ", count: count).joined()
+    }
+
+    private func line(_ count: Int) -> String {
+        Array(repeating: "-", count: count).joined()
     }
 
     private func syncMessagesAlignment() {

@@ -1,5 +1,5 @@
-public struct LogDomain: ExpressibleByStringLiteral, CustomStringConvertible {
-    let name: String
+public struct LoggingDomain: ExpressibleByStringLiteral, CustomStringConvertible {
+    public let name: String
 
     // MARK: - ExpressibleByStringLiteral
 

@@ -1,5 +1,6 @@
 import Core
 import Foundation
+import Logger
 import SessionManager
 
 private let logEnrtyTimeDateFormatter: DateFormatter = {
@@ -21,17 +22,6 @@ private let sessionEndingDayDateFormatter: DateFormatter = {
 }()
 
 final class FileLogger: Logger {
-    init(
-        provider: LoggerProvider,
-        sessionManager: SessionManager,
-        currentDateResolver: @escaping Resolver<Date> = { .now }
-    ) {
-        self.provider = provider
-        self.sessionManager = sessionManager
-        self.currentDateResolver = currentDateResolver
-        setInitialState()
-    }
-
     private let provider: LoggerProvider
     private let sessionManager: SessionManager
     private let currentDateResolver: Resolver<Date>
@@ -48,7 +38,16 @@ final class FileLogger: Logger {
         )
     }()
 
-    // MARK: -
+    init(
+        provider: LoggerProvider,
+        sessionManager: SessionManager,
+        currentDateResolver: @escaping Resolver<Date> = { .now }
+    ) {
+        self.provider = provider
+        self.sessionManager = sessionManager
+        self.currentDateResolver = currentDateResolver
+        setInitialState()
+    }
 
     private func setInitialState() {
         let url = provider.logsURL
@@ -62,14 +61,14 @@ final class FileLogger: Logger {
             do {
                 try "".write(to: url, atomically: true, encoding: .utf8)
             } catch {
-                safeCrash("Failed to create empty logs file at \(url.path)")
+                assertionFailure("Failed to create empty logs file at \(url.path)")
             }
         }
 
         writer.writeHeader()
     }
 
-    private func appendLevelIndicatorIfNeeded(to message: inout String, from entry: LogEntry) {
+    private func appendLevelIndicatorIfNeeded(to message: inout String, from entry: LoggingEntry) {
         guard
             let symbol = entry.level.symbol,
             let file = entry.file,
@@ -82,17 +81,14 @@ final class FileLogger: Logger {
         let filename = file.split(separator: "/")
             .last
             .orEmpty
-            .replacingOccurrences(
-                of: ".swift",
-                with: ""
-            )
+            .replacing(".swift", with: "")
 
         message.append(" \(symbol) \(filename)::\(function) \(line)")
     }
 
     // MARK: - Logger
 
-    func log(_ entry: LogEntry, to target: LogTarget) {
+    func log(_ entry: LoggingEntry, to target: LoggingTarget) {
         guard target.contains(.file) else { return }
 
         writer.updateWidestDomainIfNeeded(entry.domain.name)

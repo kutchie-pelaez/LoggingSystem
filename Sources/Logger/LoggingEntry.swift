@@ -1,27 +1,21 @@
-public struct LogEntry {
+public struct LoggingEntry {
     public enum Level {
         case log
         case warning
         case error
-
-        internal var symbol: String? {
-            switch self {
-            case .log:
-                return nil
-
-            case .warning:
-                return "🟡"
-
-            case .error:
-                return "🔴"
-            }
-        }
     }
+
+    public let message: String
+    public let level: Level
+    public let domain: LoggingDomain
+    public let file: String?
+    public let function: String?
+    public let line: Int?
 
     public init(
         message: String,
         level: Level,
-        domain: LogDomain
+        domain: LoggingDomain
     ) {
         self.message = message
         self.level = level
@@ -34,7 +28,7 @@ public struct LogEntry {
     init(
         message: String,
         level: Level,
-        domain: LogDomain,
+        domain: LoggingDomain,
         file: String?,
         function: String?,
         line: Int
@@ -46,11 +40,4 @@ public struct LogEntry {
         self.function = function
         self.line = line
     }
-
-    let message: String
-    let level: Level
-    let domain: LogDomain
-    let file: String?
-    let function: String?
-    let line: Int?
 }

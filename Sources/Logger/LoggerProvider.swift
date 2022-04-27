@@ -12,7 +12,5 @@ extension LoggerProvider {
             .appendingPathComponent("logs")
     }
 
-    public var sessionAdditionalParams: [String] {
-        []
-    }
+    public var sessionAdditionalParams: [String] { [] }
 }

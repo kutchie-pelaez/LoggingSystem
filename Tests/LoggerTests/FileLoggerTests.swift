@@ -1,19 +1,36 @@
-@testable import Logger
+@testable import LoggerImpl
 import Core
+import Logger
 import SessionManager
 import Tweak
 import XCTest
 
 private let loggerTestsURL = URL(fileURLWithPath: #file)
+
 private let fixturesURL = loggerTestsURL
     .deletingLastPathComponent()
     .deletingLastPathComponent()
     .deletingLastPathComponent()
     .appendingPathComponent("Fixtures")
+
 private let testsLogsURL = fixturesURL
     .appendingPathComponent("logs")
 
 final class LoggerTests: XCTestCase {
+    private let sessionManagerMock = SessionManagerMock()
+    private let loggerProviderMock = LoggerProviderMock()
+
+    private var _currentDate: Date = .now
+
+    private var subject: Logger!
+
+    private var logs: String {
+        String(
+            data: try! Data(contentsOf: testsLogsURL),
+            encoding: .utf8
+        )!
+    }
+
     override class func setUp() {
         cleanup()
     }
@@ -30,19 +47,14 @@ final class LoggerTests: XCTestCase {
         )
     }
 
-    private let sessionManagerMock = SessionManagerMock()
-    private let loggerProviderMock = LoggerProviderMock()
-
     private func makeSubject() -> Logger {
         FileLogger(
             provider: loggerProviderMock,
             sessionManager: sessionManagerMock,
-            currentDateResolver: currentDate
+            currentDateResolver: { self._currentDate }
         )
     }
 
-    private var _currentDate: Date = .now
-    private func currentDate() -> Date { _currentDate }
     private func testDate(shiftedBy timeInterval: TimeInterval) -> Date {
         var calendar = Calendar.current
         calendar.locale = Locale(identifier: "en_US")
@@ -60,15 +72,6 @@ final class LoggerTests: XCTestCase {
 
         return referenceDate.addingTimeInterval(timeInterval)
     }
-
-    private var logs: String {
-        String(
-            data: try! Data(contentsOf: testsLogsURL),
-            encoding: .utf8
-        )!
-    }
-
-    private var subject: Logger!
 
     func test1_withDifferentDomainsAndMessages() {
         _currentDate = testDate(shiftedBy: 0)
@@ -116,7 +119,7 @@ final class LoggerTests: XCTestCase {
         _currentDate = testDate(shiftedBy: 0)
         sessionManagerMock.underlyingSession = 1
         loggerProviderMock.underlyingSessionAdditionalParams = [
-            "Some really really long parameter"
+            "Some really really really really long parameter"
         ]
         subject = makeSubject()
 
@@ -134,7 +137,7 @@ final class LoggerTests: XCTestCase {
         _currentDate = testDate(shiftedBy: 0)
         sessionManagerMock.underlyingSession = 1
         loggerProviderMock.underlyingSessionAdditionalParams = [
-            "Some parameter 123456789012"
+            "Some parameter 123456789012345678901234"
         ]
         subject = makeSubject()
 
@@ -195,13 +198,13 @@ final class LoggerTests: XCTestCase {
     }
 }
 
-extension LogDomain {
-    fileprivate static let shortDomain: Self = "shortDomain"
-    fileprivate static let reallyReallyLongDomain: Self = "reallyReallyLongDomain"
-    fileprivate static let log: Self = "log"
-    fileprivate static let warning: Self = "warning"
-    fileprivate static let error: Self = "error"
-    fileprivate static let domain: Self = "domain"
+extension LoggingDomain {
+    fileprivate static let shortDomain: LoggingDomain = "LoggerTests.shortDomain"
+    fileprivate static let reallyReallyLongDomain: LoggingDomain = "LoggerTests.reallyReallyLongDomain"
+    fileprivate static let log: LoggingDomain = "LoggerTests.log"
+    fileprivate static let warning: LoggingDomain = "LoggerTests.warning"
+    fileprivate static let error: LoggingDomain = "LoggerTests.error"
+    fileprivate static let domain: LoggingDomain = "LoggerTests.domain"
 }
 
 private final class SessionManagerMock: SessionManager {

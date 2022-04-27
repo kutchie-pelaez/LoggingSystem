@@ -1,4 +1,5 @@
 import Core
+import Logger
 import SessionManager
 
 public struct LoggerFactory {
