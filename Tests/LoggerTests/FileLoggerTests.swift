@@ -2,7 +2,7 @@
 import Core
 import Logger
 import SessionManager
-import Tweak
+import Tweaking
 import XCTest
 
 private let loggerTestsURL = URL(fileURLWithPath: #file)
