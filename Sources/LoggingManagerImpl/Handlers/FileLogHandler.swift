@@ -1,14 +1,14 @@
 import Core
 import CoreUtils
 import Foundation
-import LogEncryption
+import LogEntryEncryption
 import Logging
 
 struct FileLogHandler: LogHandler {
     private let label: String
     private let logsFileURL: URL
     private let fileHandle: FileHandle
-    private let logEncryptor: LogEncryptor
+    private let logEntryEncryptor: LogEntryEncryptor
     private let sessionNumberResolver: Resolver<Int?>
 
     private let dateFormatter = LogDateFormatter()
@@ -17,13 +17,13 @@ struct FileLogHandler: LogHandler {
         label: String,
         logsFileURL: URL,
         fileHandle: FileHandle,
-        logEncryptor: LogEncryptor,
+        logEntryEncryptor: LogEntryEncryptor,
         sessionNumberResolver: @escaping Resolver<Int?>
     ) {
         self.label = label
         self.logsFileURL = logsFileURL
         self.fileHandle = fileHandle
-        self.logEncryptor = logEncryptor
+        self.logEntryEncryptor = logEntryEncryptor
         self.sessionNumberResolver = sessionNumberResolver
     }
 
@@ -55,7 +55,7 @@ struct FileLogHandler: LogHandler {
     }
 
     private func writeEntry(_ logEntry: FileLogEntry) throws {
-        let encryptedLogEnrty = logEncryptor.encrypt(logEntry.description)
+        let encryptedLogEnrty = logEntryEncryptor.encrypt(logEntry.description)
 
         guard let data = encryptedLogEnrty.description.data(using: .utf8) else {
             throw ContextError(
@@ -98,7 +98,7 @@ private struct FileLogEntry: CustomStringConvertible {
     private let message: String
     private let metadata: Logger.Metadata
 
-    private let metadataEncoder = LogMetadataEncoder()
+    private let logEntryMetadataEncoder = LogEntryMetadataEncoder()
 
     init(message: String, metadata: Logger.Metadata) {
         self.message = message
@@ -108,7 +108,7 @@ private struct FileLogEntry: CustomStringConvertible {
     // MARK: CustomStringConvertible
 
     var description: String {
-        let encodedMetadata = metadataEncoder.encode(metadata)
+        let encodedMetadata = logEntryMetadataEncoder.encode(metadata)
 
         return [message, encodedMetadata]
             .unwrapped()

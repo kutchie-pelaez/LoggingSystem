@@ -1,5 +1,5 @@
 import Foundation
-import LogEncryption
+import LogEntryEncryption
 import LogsExtractor
 
 public enum LogsExtractorFactory {
@@ -7,12 +7,12 @@ public enum LogsExtractorFactory {
         secret: String,
         logsDirectoryURL: URL
     ) -> some LogsExtractor {
-        let decoder = LogDecoder(secret: secret)
-        let encoder = LogEncoder(secret: secret)
+        let logEntryDecryptor = LogEntryDecryptor(secret: secret)
+        let logEntryEncryptor = LogEntryEncryptor(secret: secret)
 
         return LogsExtractorImpl(
-            decoder: decoder,
-            encoder: encoder,
+            logEntryDecryptor: logEntryDecryptor,
+            logEntryEncryptor: logEntryEncryptor,
             logsDirectoryURL: logsDirectoryURL
         )
     }

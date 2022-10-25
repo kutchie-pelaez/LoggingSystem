@@ -1,4 +1,4 @@
-public struct LogDecryptor {
+public struct LogEntryDecryptor {
     private let secret: String
 
     public init(secret: String) {

@@ -1,14 +1,14 @@
 import Core
 import CoreUtils
 import Foundation
-import LogEncryption
+import LogEntryEncryption
 import Logging
 import LoggingManager
 import SessionManager
 
 final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
     private let environment: Environment
-    private let logEncryptor: LogEncryptor
+    private let logEntryEncryptor: LogEntryEncryptor
     private let logsDirectoryURL: URL
     private let sessionManager: SessionManager
 
@@ -27,9 +27,9 @@ final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
         }
     }()
 
-    init(environment: Environment, logEncryptor: LogEncryptor, logsDirectoryURL: URL, sessionManager: SM) {
+    init(environment: Environment, logEntryEncryptor: LogEntryEncryptor, logsDirectoryURL: URL, sessionManager: SM) {
         self.environment = environment
-        self.logEncryptor = logEncryptor
+        self.logEntryEncryptor = logEntryEncryptor
         self.logsDirectoryURL = logsDirectoryURL
         self.sessionManager = sessionManager
     }
@@ -72,7 +72,7 @@ final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
                 label: label,
                 logsFileURL: logsFileURL,
                 fileHandle: fileHandle,
-                logEncryptor: logEncryptor,
+                logEntryEncryptor: logEntryEncryptor,
                 sessionNumberResolver: { [weak self] in self?.sessionManager.subject.value }
             )
         }()

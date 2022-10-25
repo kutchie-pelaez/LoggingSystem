@@ -1,17 +1,19 @@
 import Foundation
-import LogEncryption
+import LogEntryEncryption
 import LogsExtractor
 
 final class LogsExtractorImpl: LogsExtractor {
-    private let decoder: LogDecoder
-    private let encoder: LogEncoder
+    private let logEntryDecryptor: LogEntryDecryptor
+    private let logEntryEncryptor: LogEntryEncryptor
     private let logsDirectoryURL: URL
 
-    init(decoder: LogDecoder, encoder: LogEncoder, logsDirectoryURL: URL) {
-        self.decoder = decoder
-        self.encoder = encoder
+    init(logEntryDecryptor: LogEntryDecryptor, logEntryEncryptor: LogEntryEncryptor, logsDirectoryURL: URL) {
+        self.logEntryDecryptor = logEntryDecryptor
+        self.logEntryEncryptor = logEntryEncryptor
         self.logsDirectoryURL = logsDirectoryURL
     }
+
+    // MARK: LogsExtractor
 
     func extract() async throws -> Data {
         fatalError()
