@@ -6,6 +6,8 @@ let package = Package(
     name: "LoggingManager",
     platforms: [.iOS(.v16)],
     products: [
+        .library(name: "LogsExtractor", targets: ["LogsExtractor"]),
+        .library(name: "LogsExtractorImpl", targets: ["LogsExtractorImpl"]),
         .library(name: "LoggingManager", targets: ["LoggingManager"]),
         .library(name: "LoggingManagerImpl", targets: ["LoggingManagerImpl"])
     ],
@@ -15,6 +17,10 @@ let package = Package(
         .package(url: "https://github.com/kutchie-pelaez-packages/SessionManager.git", branch: "master")
     ],
     targets: [
+        .target(name: "LogsExtractor"),
+        .target(name: "LogsExtractorImpl", dependencies: [
+            .target(name: "LogsExtractor")
+        ]),
         .target(name: "LoggingManager", dependencies: [
             .product(name: "CoreUtils", package: "Core")
         ]),

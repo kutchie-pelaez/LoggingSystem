@@ -49,10 +49,4 @@ final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
             return MultiplexLogHandler(logHandlers)
         }
     }
-
-    // MARK: LoggingManager
-
-    func extractLogs() async throws -> Data {
-        fatalError()
-    }
 }
