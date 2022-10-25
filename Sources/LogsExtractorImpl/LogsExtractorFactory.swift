@@ -1,7 +1,14 @@
+import LogCoding
 import LogsExtractor
 
 public enum LogsExtractorFactory {
     public static func produce(secret: String) -> some LogsExtractor {
-        LogsExtractorImpl(secret: secret)
+        let decoder = LogDecoder(secret: secret)
+        let encoder = LogEncoder(secret: secret)
+
+        return LogsExtractorImpl(
+            decoder: decoder,
+            encoder: encoder
+        )
     }
 }

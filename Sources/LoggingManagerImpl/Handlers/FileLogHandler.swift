@@ -1,10 +1,12 @@
 import Core
 import Foundation
+import LogCoding
 import Logging
 
 struct FileLogHandler: LogHandler {
     private let label: String
     private let logsFileURL: URL
+    private let encoder: LogEncoder
     private let sessionNumberResolver: Resolver<Int?>
 
     private lazy var fileHandle: FileHandle? = {
@@ -19,10 +21,12 @@ struct FileLogHandler: LogHandler {
     init(
         label: String,
         logsFileURL: URL,
+        encoder: LogEncoder,
         sessionNumberResolver: @escaping Resolver<Int?>
     ) {
         self.label = label
         self.logsFileURL = logsFileURL
+        self.encoder = encoder
         self.sessionNumberResolver = sessionNumberResolver
     }
 
@@ -88,7 +92,7 @@ struct FileLogHandler: LogHandler {
         createLogsDirectoryifNeeded()
         createLogsFileIfNeeded()
 
-        let fullMetadata = fullMetadata(merging: metadata, level: level, source: source, file: file, function: function, line: line)
+        let _ = fullMetadata(merging: metadata, level: level, source: source, file: file, function: function, line: line)
     }
 }
 

@@ -1,20 +1,21 @@
 import Core
 import CoreUtils
 import Foundation
+import LogCoding
 import Logging
 import LoggingManager
 import SessionManager
 
 final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
     private let environment: Environment
-    private let secret: String
+    private let encoder: LogEncoder
     private let sessionManager: SessionManager
 
     private let logsFileName = UUID().uuidString
 
-    init(environment: Environment, secret: String, sessionManager: SM) {
+    init(environment: Environment, encoder: LogEncoder, sessionManager: SM) {
         self.environment = environment
-        self.secret = secret
+        self.encoder = encoder
         self.sessionManager = sessionManager
     }
 
@@ -24,6 +25,7 @@ final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
         let fileLogHandler = FileLogHandler(
             label: label,
             logsFileURL: logsFileURL,
+            encoder: encoder,
             sessionNumberResolver: { [weak self] in self?.sessionManager.subject.value }
         )
 

@@ -1,4 +1,5 @@
 import CoreUtils
+import LogCoding
 import LoggingManager
 import SessionManager
 
@@ -8,9 +9,11 @@ public enum LoggerFactory {
         secret: String,
         sessionManager: some SessionManager
     ) -> some LoggingManager {
-        LoggingManagerImpl(
+        let encoder = LogEncoder(secret: secret)
+
+        return LoggingManagerImpl(
             environment: environment,
-            secret: secret,
+            encoder: encoder,
             sessionManager: sessionManager
         )
     }
