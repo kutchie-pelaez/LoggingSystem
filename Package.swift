@@ -17,10 +17,12 @@ let package = Package(
         .package(url: "https://github.com/kutchie-pelaez-packages/SessionManager.git", branch: "master")
     ],
     targets: [
-        .target(name: "LogCoding"),
+        .target(name: "LogEncryption", dependencies: [
+            .product(name: "Logging", package: "swift-log")
+        ]),
         .target(name: "LogsExtractor"),
         .target(name: "LogsExtractorImpl", dependencies: [
-            .target(name: "LogCoding"),
+            .target(name: "LogEncryption"),
             .target(name: "LogsExtractor")
         ]),
         .target(name: "LoggingManager", dependencies: [
@@ -31,7 +33,7 @@ let package = Package(
             .product(name: "CoreUtils", package: "Core"),
             .product(name: "Logging", package: "swift-log"),
             .product(name: "SessionManager", package: "SessionManager"),
-            .target(name: "LogCoding"),
+            .target(name: "LogEncryption"),
             .target(name: "LoggingManager")
         ])
     ]

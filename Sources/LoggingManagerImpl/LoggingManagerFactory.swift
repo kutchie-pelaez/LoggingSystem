@@ -1,6 +1,6 @@
 import CoreUtils
 import Foundation
-import LogCoding
+import LogEncryption
 import LoggingManager
 import SessionManager
 
@@ -11,11 +11,11 @@ public enum LoggerFactory {
         logsDirectoryURL: URL,
         sessionManager: some SessionManager
     ) -> some LoggingManager {
-        let encoder = LogEncoder(secret: secret)
+        let logEncryptor = LogEncryptor(secret: secret)
 
         return LoggingManagerImpl(
             environment: environment,
-            encoder: encoder,
+            logEncryptor: logEncryptor,
             logsDirectoryURL: logsDirectoryURL,
             sessionManager: sessionManager
         )

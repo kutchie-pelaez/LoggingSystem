@@ -1,11 +1,11 @@
-public struct LogDecoder {
+public struct LogDecryptor {
     private let secret: String
 
     public init(secret: String) {
         self.secret = secret
     }
 
-    func decode(_ log: String) -> String {
-        fatalError()
+    public func decrypt(_ log: String) -> String {
+        log
     }
 }

@@ -1,53 +1,30 @@
 import Core
+import CoreUtils
 import Foundation
-import LogCoding
+import LogEncryption
 import Logging
 
 struct FileLogHandler: LogHandler {
     private let label: String
     private let logsFileURL: URL
-    private let encoder: LogEncoder
+    private let fileHandle: FileHandle
+    private let logEncryptor: LogEncryptor
     private let sessionNumberResolver: Resolver<Int?>
 
-    private lazy var fileHandle: FileHandle? = {
-        do {
-            return try FileHandle(forWritingTo: logsFileURL)
-        } catch {
-            assertionFailure(error.localizedDescription)
-            return nil
-        }
-    }()
+    private let dateFormatter = LogDateFormatter()
 
     init(
         label: String,
         logsFileURL: URL,
-        encoder: LogEncoder,
+        fileHandle: FileHandle,
+        logEncryptor: LogEncryptor,
         sessionNumberResolver: @escaping Resolver<Int?>
     ) {
         self.label = label
         self.logsFileURL = logsFileURL
-        self.encoder = encoder
+        self.fileHandle = fileHandle
+        self.logEncryptor = logEncryptor
         self.sessionNumberResolver = sessionNumberResolver
-    }
-
-    private func createLogsDirectoryifNeeded() {
-        let logsDirectoryURL = logsFileURL.deletingLastPathComponent()
-
-        guard !fileManager.directoryExists(at: logsDirectoryURL) else { return }
-
-        do {
-            try fileManager.createDirectory(at: logsDirectoryURL)
-        } catch {
-            assertionFailure(error.localizedDescription)
-        }
-    }
-
-    private func createLogsFileIfNeeded() {
-        guard !fileManager.fileExists(at: logsFileURL) else { return }
-
-        if fileManager.createFile(at: logsFileURL, contents: nil) {
-            assertionFailure()
-        }
     }
 
     private func fullMetadata(
@@ -77,6 +54,19 @@ struct FileLogHandler: LogHandler {
             .appending(metadataToMerge)
     }
 
+    private func writeEntry(_ logEntry: FileLogEntry) throws {
+        let encryptedLogEnrty = logEncryptor.encrypt(logEntry.description)
+
+        guard let data = encryptedLogEnrty.description.data(using: .utf8) else {
+            throw ContextError(
+                message: "Failed to get utf8 data from encrypted log enrty",
+                context: encryptedLogEnrty
+            )
+        }
+
+        try fileHandle.write(contentsOf: data)
+    }
+
     // MARK: LogHandler
 
     var metadata: Logger.Metadata = [:]
@@ -89,11 +79,40 @@ struct FileLogHandler: LogHandler {
     }
 
     func log(level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?, source: String, file: String, function: String, line: UInt) {
-        createLogsDirectoryifNeeded()
-        createLogsFileIfNeeded()
+        let message = [
+            dateFormatter.currentTimestamp().surroundedBy("[", "]"),
+            message.description
+        ].unwrapped().joined(separator: " ")
+        let metadata = fullMetadata(merging: metadata, level: level, source: source, file: file, function: function, line: line)
+        let logEntry = FileLogEntry(message: message, metadata: metadata)
 
-        let _ = fullMetadata(merging: metadata, level: level, source: source, file: file, function: function, line: line)
+        do {
+            try writeEntry(logEntry)
+        } catch {
+            assertionFailure(error.localizedDescription)
+        }
     }
 }
 
-private var fileManager: FileManager { .default }
+private struct FileLogEntry: CustomStringConvertible {
+    private let message: String
+    private let metadata: Logger.Metadata
+
+    private let metadataEncoder = LogMetadataEncoder()
+
+    init(message: String, metadata: Logger.Metadata) {
+        self.message = message
+        self.metadata = metadata
+    }
+
+    // MARK: CustomStringConvertible
+
+    var description: String {
+        let encodedMetadata = metadataEncoder.encode(metadata)
+
+        return [message, encodedMetadata]
+            .unwrapped()
+            .joined(separator: " ")
+            .appending("\n")
+    }
+}

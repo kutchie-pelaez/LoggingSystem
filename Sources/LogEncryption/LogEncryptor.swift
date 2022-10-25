@@ -1,11 +1,11 @@
-public struct LogEncoder {
+public struct LogEncryptor {
     private let secret: String
 
     public init(secret: String) {
         self.secret = secret
     }
 
-    func encode(_ log: String) -> String {
-        fatalError()
+    public func encrypt(_ log: String) -> String {
+        log
     }
 }

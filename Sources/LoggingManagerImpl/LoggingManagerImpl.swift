@@ -1,34 +1,81 @@
 import Core
 import CoreUtils
 import Foundation
-import LogCoding
+import LogEncryption
 import Logging
 import LoggingManager
 import SessionManager
 
 final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
     private let environment: Environment
-    private let encoder: LogEncoder
+    private let logEncryptor: LogEncryptor
     private let logsDirectoryURL: URL
     private let sessionManager: SessionManager
 
-    private let logsFileName = UUID().uuidString
+    private let fileManager = FileManager.default
 
-    init(environment: Environment, encoder: LogEncoder, logsDirectoryURL: URL, sessionManager: SM) {
+    private lazy var logsFileURL = logsDirectoryURL.appending(path: UUID().uuidString)
+    private lazy var fileHandle: FileHandle? = {
+        do {
+            createLogsDirectoryifNeeded()
+            createLogsFileIfNeeded()
+
+            return try FileHandle(forWritingTo: logsFileURL)
+        } catch {
+            assertionFailure(error.localizedDescription)
+            return nil
+        }
+    }()
+
+    init(environment: Environment, logEncryptor: LogEncryptor, logsDirectoryURL: URL, sessionManager: SM) {
         self.environment = environment
-        self.encoder = encoder
+        self.logEncryptor = logEncryptor
         self.logsDirectoryURL = logsDirectoryURL
         self.sessionManager = sessionManager
     }
 
+    deinit {
+        do {
+            try fileHandle?.close()
+        } catch {
+            assertionFailure(error.localizedDescription)
+        }
+    }
+
+    private func createLogsDirectoryifNeeded() {
+        let logsDirectoryURL = logsFileURL.deletingLastPathComponent()
+
+        guard !fileManager.directoryExists(at: logsDirectoryURL) else { return }
+
+        do {
+            try fileManager.createDirectory(at: logsDirectoryURL)
+        } catch {
+            assertionFailure(error.localizedDescription)
+        }
+    }
+
+    private func createLogsFileIfNeeded() {
+        guard !fileManager.fileExists(at: logsFileURL) else { return }
+
+        if !fileManager.createFile(at: logsFileURL, contents: nil) {
+            assertionFailure()
+        }
+    }
+
     private func makeLogHandlers(with label: String) -> [any LogHandler] {
-        let logsFileURL = logsDirectoryURL.appending(path: logsFileName)
-        let fileLogHandler = FileLogHandler(
-            label: label,
-            logsFileURL: logsFileURL,
-            encoder: encoder,
-            sessionNumberResolver: { [weak self] in self?.sessionManager.subject.value }
-        )
+        let fileLogHandler = {
+            guard let fileHandle else {
+                return Optional<FileLogHandler>.none
+            }
+
+            return FileLogHandler(
+                label: label,
+                logsFileURL: logsFileURL,
+                fileHandle: fileHandle,
+                logEncryptor: logEncryptor,
+                sessionNumberResolver: { [weak self] in self?.sessionManager.subject.value }
+            )
+        }()
 
         let stdoutLogHandler = {
             guard environment == .dev else {

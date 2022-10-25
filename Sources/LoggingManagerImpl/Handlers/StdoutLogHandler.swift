@@ -5,21 +5,10 @@ import Logging
 struct StdoutLogHandler: LogHandler {
     private let label: String
 
+    private let dateFormatter = LogDateFormatter()
+
     init(label: String) {
         self.label = label
-    }
-
-    private func timestamp() -> String {
-        var buffer = [Int8](repeating: 0, count: 255)
-        var timestamp = time(nil)
-        let localTime = localtime(&timestamp)
-        strftime(&buffer, buffer.count, "%d-%m-%Y %H:%M:%S%z", localTime)
-
-        return buffer.withUnsafeBufferPointer {
-            $0.withMemoryRebound(to: CChar.self) {
-                String(cString: $0.baseAddress!)
-            }
-        }
     }
 
     private func indicator(for level: Logger.Level) -> String? {
@@ -71,7 +60,7 @@ struct StdoutLogHandler: LogHandler {
 
     func log(level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?, source _: String, file: String, function _: String, line: UInt) {
         let message = [
-            timestamp().surroundedBy("[", "]"),
+            dateFormatter.currentTimestamp().surroundedBy("[", "]"),
             label.surroundedBy("[", "]"),
             hint(file: file, line: line),
             indicator(for: level),

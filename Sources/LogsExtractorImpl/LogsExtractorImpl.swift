@@ -1,5 +1,5 @@
 import Foundation
-import LogCoding
+import LogEncryption
 import LogsExtractor
 
 final class LogsExtractorImpl: LogsExtractor {
