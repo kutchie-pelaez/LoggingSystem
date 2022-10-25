@@ -9,18 +9,19 @@ import SessionManager
 final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
     private let environment: Environment
     private let encoder: LogEncoder
+    private let logsDirectoryURL: URL
     private let sessionManager: SessionManager
 
     private let logsFileName = UUID().uuidString
 
-    init(environment: Environment, encoder: LogEncoder, sessionManager: SM) {
+    init(environment: Environment, encoder: LogEncoder, logsDirectoryURL: URL, sessionManager: SM) {
         self.environment = environment
         self.encoder = encoder
+        self.logsDirectoryURL = logsDirectoryURL
         self.sessionManager = sessionManager
     }
 
     private func makeLogHandlers(with label: String) -> [any LogHandler] {
-        let logsDirectoryURL = FileManager.default.documents.appending(path: "logs")
         let logsFileURL = logsDirectoryURL.appending(path: logsFileName)
         let fileLogHandler = FileLogHandler(
             label: label,
