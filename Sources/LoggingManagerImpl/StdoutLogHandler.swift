@@ -79,7 +79,7 @@ struct StdoutLogHandler: LogHandler {
         ].unwrapped().joined(separator: " ")
         let logEntry = StdoutLogEntry(
             message: message,
-            metadata: self.metadata.mergingFirst(metadata)
+            metadata: self.metadata.appending(metadata)
         )
         writeToStdout(logEntry.description)
     }

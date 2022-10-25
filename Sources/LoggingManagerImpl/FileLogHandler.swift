@@ -3,7 +3,9 @@ import Foundation
 import Logging
 
 struct FileLogHandler: LogHandler {
+    private let label: String
     private let logsFileURL: URL
+    private let sessionNumberResolver: Resolver<Int?>
 
     private lazy var fileHandle: FileHandle? = {
         do {
@@ -14,8 +16,14 @@ struct FileLogHandler: LogHandler {
         }
     }()
 
-    init(logsFileURL: URL) {
+    init(
+        label: String,
+        logsFileURL: URL,
+        sessionNumberResolver: @escaping Resolver<Int?>
+    ) {
+        self.label = label
         self.logsFileURL = logsFileURL
+        self.sessionNumberResolver = sessionNumberResolver
     }
 
     private func createLogsDirectoryifNeeded() {
@@ -38,6 +46,33 @@ struct FileLogHandler: LogHandler {
         }
     }
 
+    private func fullMetadata(
+        merging metadataToMerge: Logger.Metadata?,
+        level: Logger.Level,
+        source: String,
+        file: String,
+        function: String,
+        line: UInt
+    ) -> Logger.Metadata {
+        var additionalMetadata: Logger.Metadata = [
+            "label": "\(label)",
+            "level": "\(level)",
+            "module": "\(source)",
+            "function": "\(function)",
+            "line": "\(line)"
+        ]
+        if let fileLastComponent = file.split(separator: "/").last {
+            additionalMetadata["file"] = "\(fileLastComponent)"
+        }
+        if let sessionNumber = sessionNumberResolver() {
+            additionalMetadata["sessionNumber"] = "\(sessionNumber)"
+        }
+
+        return additionalMetadata
+            .appending(self.metadata)
+            .appending(metadataToMerge)
+    }
+
     // MARK: LogHandler
 
     var metadata: Logger.Metadata = [:]
@@ -52,6 +87,8 @@ struct FileLogHandler: LogHandler {
     func log(level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?, source: String, file: String, function: String, line: UInt) {
         createLogsDirectoryifNeeded()
         createLogsFileIfNeeded()
+
+        let fullMetadata = fullMetadata(merging: metadata, level: level, source: source, file: file, function: function, line: line)
     }
 }
 

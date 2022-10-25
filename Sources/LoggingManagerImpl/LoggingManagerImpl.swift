@@ -21,7 +21,12 @@ final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
     private func makeLogHandlers(with label: String) -> [any LogHandler] {
         let logsDirectoryURL = FileManager.default.documents.appending(path: "logs")
         let logsFileURL = logsDirectoryURL.appending(path: logsFileName)
-        let fileLogHandler = FileLogHandler(logsFileURL: logsFileURL)
+        let fileLogHandler = FileLogHandler(
+            label: label,
+            logsFileURL: logsFileURL,
+            sessionNumberResolver: { [weak self] in self?.sessionManager.subject.value }
+        )
+
         let stdoutLogHandler = {
             guard environment == .dev else {
                 return Optional<StdoutLogHandler>.none
@@ -47,7 +52,7 @@ final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
 
     // MARK: LoggingManager
 
-    func extractLogs() throws -> Data {
+    func extractLogs() async throws -> Data {
         fatalError()
     }
 }
