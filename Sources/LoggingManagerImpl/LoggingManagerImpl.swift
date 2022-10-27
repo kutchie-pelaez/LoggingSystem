@@ -12,9 +12,10 @@ final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
     private let logsDirectoryURL: URL
     private let sessionManager: SessionManager
 
-    private let fileManager = FileManager.default
+    private let logsFileName = UUID().uuidString + ".kplogs"
+    private lazy var logsFileURL = logsDirectoryURL.appending(path: "LOG")
 
-    private lazy var logsFileURL = logsDirectoryURL.appending(path: UUID().uuidString)
+    private let fileManager = FileManager.default
     private lazy var fileHandle: FileHandle? = {
         do {
             createLogsDirectoryifNeeded()
@@ -27,7 +28,12 @@ final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
         }
     }()
 
-    init(environment: Environment, logEntryEncryptor: LogEntryEncryptor, logsDirectoryURL: URL, sessionManager: SM) {
+    init(
+        environment: Environment,
+        logEntryEncryptor: LogEntryEncryptor,
+        logsDirectoryURL: URL,
+        sessionManager: SM
+    ) {
         self.environment = environment
         self.logEntryEncryptor = logEntryEncryptor
         self.logsDirectoryURL = logsDirectoryURL

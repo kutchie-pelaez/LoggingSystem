@@ -23,7 +23,7 @@ struct StdoutLogHandler: LogHandler {
         }
     }
 
-    private func hint(file: String, line: UInt) -> String {
+    private func hint(file: String, function: String, line: UInt) -> String {
         let fileStem = file
             .split(separator: "/")
             .last?
@@ -31,7 +31,7 @@ struct StdoutLogHandler: LogHandler {
             .first
             .map(String.init)
 
-        return [fileStem, line.description]
+        return [fileStem, function, line.description]
             .unwrapped()
             .joined(separator: "::")
     }
@@ -58,11 +58,12 @@ struct StdoutLogHandler: LogHandler {
         set { metadata[key] = newValue }
     }
 
-    func log(level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?, source _: String, file: String, function _: String, line: UInt) {
+    func log(level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?, source _: String, file: String, function: String, line: UInt) {
         let message = [
             dateFormatter.currentTimestamp().surroundedBy("[", "]"),
             label.surroundedBy("[", "]"),
-            hint(file: file, line: line),
+            hint(file: file, function: function, line: line),
+            "-",
             indicator(for: level),
             message.description
         ].unwrapped().joined(separator: " ")

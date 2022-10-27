@@ -5,6 +5,8 @@ import LogEntryEncryption
 import Logging
 
 struct FileLogHandler: LogHandler {
+    private static let writingQueue = DispatchQueue(label: "com.kutchie-pelaez.Logging")
+
     private let label: String
     private let logsFileURL: URL
     private let fileHandle: FileHandle
@@ -12,6 +14,7 @@ struct FileLogHandler: LogHandler {
     private let sessionNumberResolver: Resolver<Int?>
 
     private let dateFormatter = LogDateFormatter()
+    private let logEntryMetadataEncoder = LogEntryMetadataEncoder()
 
     init(
         label: String,
@@ -54,17 +57,27 @@ struct FileLogHandler: LogHandler {
             .appending(metadataToMerge)
     }
 
-    private func writeEntry(_ logEntry: FileLogEntry) throws {
-        let encryptedLogEnrty = logEntryEncryptor.encrypt(logEntry.description)
+    private func write(message: String, with metadata: Logger.Metadata) {
+        do {
+            let encodedMetadata = logEntryMetadataEncoder.encode(metadata)
+            let rawLogEntry = [message, encodedMetadata]
+                .joined(separator: " ")
+            let encryptedLogEnrty = logEntryEncryptor.encrypt(rawLogEntry)
+                .appending("\n")
 
-        guard let data = encryptedLogEnrty.description.data(using: .utf8) else {
-            throw ContextError(
-                message: "Failed to get utf8 data from encrypted log enrty",
-                context: encryptedLogEnrty
-            )
+            guard let logEnrtyData = encryptedLogEnrty.data(using: .utf8) else {
+                throw ContextError(
+                    message: "Failed to get utf8 data from encrypted log enrty",
+                    context: encryptedLogEnrty
+                )
+            }
+
+            try fileHandle.seekToEnd()
+            try fileHandle.write(contentsOf: logEnrtyData)
+            try fileHandle.synchronize()
+        } catch {
+            assertionFailure(error.localizedDescription)
         }
-
-        try fileHandle.write(contentsOf: data)
     }
 
     // MARK: LogHandler
@@ -78,41 +91,21 @@ struct FileLogHandler: LogHandler {
         set { metadata[key] = newValue }
     }
 
-    func log(level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?, source: String, file: String, function: String, line: UInt) {
-        let message = [
-            dateFormatter.currentTimestamp().surroundedBy("[", "]"),
-            message.description
-        ].unwrapped().joined(separator: " ")
-        let metadata = fullMetadata(merging: metadata, level: level, source: source, file: file, function: function, line: line)
-        let logEntry = FileLogEntry(message: message, metadata: metadata)
+    func log(
+        level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?,
+        source: String, file: String, function: String, line: UInt
+    ) {
+        Self.writingQueue.async {
+            let message = [
+                dateFormatter.currentTimestamp().surroundedBy("[", "]"),
+                message.description
+            ].unwrapped().joined(separator: " ")
+            let metadata = fullMetadata(
+                merging: metadata, level: level,
+                source: source, file: file, function: function, line: line
+            )
 
-        do {
-            try writeEntry(logEntry)
-        } catch {
-            assertionFailure(error.localizedDescription)
+            write(message: message, with: metadata)
         }
-    }
-}
-
-private struct FileLogEntry: CustomStringConvertible {
-    private let message: String
-    private let metadata: Logger.Metadata
-
-    private let logEntryMetadataEncoder = LogEntryMetadataEncoder()
-
-    init(message: String, metadata: Logger.Metadata) {
-        self.message = message
-        self.metadata = metadata
-    }
-
-    // MARK: CustomStringConvertible
-
-    var description: String {
-        let encodedMetadata = logEntryMetadataEncoder.encode(metadata)
-
-        return [message, encodedMetadata]
-            .unwrapped()
-            .joined(separator: " ")
-            .appending("\n")
     }
 }
