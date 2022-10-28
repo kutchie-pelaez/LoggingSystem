@@ -18,6 +18,7 @@ let package = Package(
     ],
     targets: [
         .target(name: "LogEntryEncryption", dependencies: [
+            .product(name: "CoreUtils", package: "Core"),
             .product(name: "Logging", package: "swift-log")
         ]),
         .target(name: "LogsExtractor"),

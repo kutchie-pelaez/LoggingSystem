@@ -13,13 +13,20 @@ struct StdoutLogHandler: LogHandler {
 
     private func indicator(for level: Logger.Level) -> String? {
         switch level {
-        case .trace: return nil
-        case .debug: return nil
-        case .info: return nil
-        case .notice: return "👀"
-        case .warning: return "⚠️"
-        case .error: return "⛔️"
-        case .critical: return "📛"
+        case .notice:
+            return "👀"
+
+        case .warning:
+            return "⚠️"
+
+        case .error:
+            return "⛔️"
+
+        case .critical:
+            return "📛"
+
+        default:
+            return nil
         }
     }
 
@@ -36,8 +43,8 @@ struct StdoutLogHandler: LogHandler {
             .joined(separator: "::")
     }
 
-    private func writeToStdout(_ output: String) {
-        var output = output
+    private func write(entry: StdoutLogEntry) {
+        var output = entry.description
         output.makeContiguousUTF8()
         output.utf8.withContiguousStorageIfAvailable { utf8Bytes in
             flockfile(stdout)
@@ -58,7 +65,10 @@ struct StdoutLogHandler: LogHandler {
         set { metadata[key] = newValue }
     }
 
-    func log(level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?, source _: String, file: String, function: String, line: UInt) {
+    func log(
+        level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?,
+        source _: String, file: String, function: String, line: UInt
+    ) {
         let message = [
             dateFormatter.currentTimestamp().surroundedBy("[", "]"),
             label.surroundedBy("[", "]"),
@@ -71,7 +81,7 @@ struct StdoutLogHandler: LogHandler {
             message: message,
             metadata: self.metadata.appending(metadata)
         )
-        writeToStdout(logEntry.description)
+        write(entry: logEntry)
     }
 }
 

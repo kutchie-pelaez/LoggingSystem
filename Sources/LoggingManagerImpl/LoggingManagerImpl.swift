@@ -12,8 +12,8 @@ final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
     private let logsDirectoryURL: URL
     private let sessionManager: SessionManager
 
-    private let logsFileName = UUID().uuidString + ".kplogs"
-    private lazy var logsFileURL = logsDirectoryURL.appending(path: "LOG")
+    private let logsFileName = "test.kplogs" // UUID().uuidString + ".kplogs"
+    private lazy var logsFileURL = logsDirectoryURL.appending(path: logsFileName)
 
     private let fileManager = FileManager.default
     private lazy var fileHandle: FileHandle? = {

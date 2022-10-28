@@ -5,7 +5,7 @@ import LogEntryEncryption
 import Logging
 
 struct FileLogHandler: LogHandler {
-    private static let writingQueue = DispatchQueue(label: "com.kutchie-pelaez.Logging")
+    private static let queue = DispatchQueue(label: "com.kutchie-pelaez.Logging")
 
     private let label: String
     private let logsFileURL: URL
@@ -30,37 +30,35 @@ struct FileLogHandler: LogHandler {
         self.sessionNumberResolver = sessionNumberResolver
     }
 
-    private func fullMetadata(
-        merging metadataToMerge: Logger.Metadata?,
-        level: Logger.Level,
-        source: String,
-        file: String,
-        function: String,
-        line: UInt
+    private func mergedMetadata(
+        logMetadata: Logger.Metadata?, level: Logger.Level,
+        source: String, file: String, function: String, line: UInt
     ) -> Logger.Metadata {
-        var additionalMetadata: Logger.Metadata = [
+        let timestamp = dateFormatter.currentTimestamp()
+        var coreMetadata: Logger.Metadata = [
+            "timestamp": "\(timestamp)",
             "label": "\(label)",
             "level": "\(level)",
-            "module": "\(source)",
+            "source": "\(source)",
             "function": "\(function)",
             "line": "\(line)"
         ]
         if let fileLastComponent = file.split(separator: "/").last {
-            additionalMetadata["file"] = "\(fileLastComponent)"
+            coreMetadata["file"] = "\(fileLastComponent)"
         }
         if let sessionNumber = sessionNumberResolver() {
-            additionalMetadata["sessionNumber"] = "\(sessionNumber)"
+            coreMetadata["sessionNumber"] = "\(sessionNumber)"
         }
 
-        return additionalMetadata
-            .appending(self.metadata)
-            .appending(metadataToMerge)
+        return coreMetadata
+            .appending(metadata)
+            .appending(logMetadata)
     }
 
-    private func write(message: String, with metadata: Logger.Metadata) {
+    private func write(message: Logger.Message, with metadata: Logger.Metadata) {
         do {
-            let encodedMetadata = logEntryMetadataEncoder.encode(metadata)
-            let rawLogEntry = [message, encodedMetadata]
+            let encodedMetadata = try logEntryMetadataEncoder.encode(metadata)
+            let rawLogEntry = [message.description, encodedMetadata]
                 .joined(separator: " ")
             let encryptedLogEnrty = logEntryEncryptor.encrypt(rawLogEntry)
                 .appending("\n")
@@ -95,16 +93,11 @@ struct FileLogHandler: LogHandler {
         level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?,
         source: String, file: String, function: String, line: UInt
     ) {
-        Self.writingQueue.async {
-            let message = [
-                dateFormatter.currentTimestamp().surroundedBy("[", "]"),
-                message.description
-            ].unwrapped().joined(separator: " ")
-            let metadata = fullMetadata(
-                merging: metadata, level: level,
+        Self.queue.async {
+            let metadata = mergedMetadata(
+                logMetadata: metadata, level: level,
                 source: source, file: file, function: function, line: line
             )
-
             write(message: message, with: metadata)
         }
     }

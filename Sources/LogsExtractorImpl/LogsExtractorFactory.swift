@@ -8,11 +8,9 @@ public enum LogsExtractorFactory {
         logsDirectoryURL: URL
     ) -> some LogsExtractor {
         let logEntryDecryptor = LogEntryDecryptor(secret: secret)
-        let logEntryEncryptor = LogEntryEncryptor(secret: secret)
 
         return LogsExtractorImpl(
             logEntryDecryptor: logEntryDecryptor,
-            logEntryEncryptor: logEntryEncryptor,
             logsDirectoryURL: logsDirectoryURL
         )
     }
