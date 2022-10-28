@@ -23,16 +23,16 @@ public struct LogEntryMetadataEncoder {
 }
 
 private struct MetadataValueEncodableWrapper: Encodable {
-    private struct CodingKeys: CodingKey {
+    private struct StringCodingKey: CodingKey {
         var stringValue: String
-        var intValue: Int? { fatalError() }
+        var intValue: Int?
 
         init?(stringValue: String) {
             self.stringValue = stringValue
         }
 
         init?(intValue: Int) {
-            fatalError()
+            return nil
         }
     }
 
@@ -58,10 +58,12 @@ private struct MetadataValueEncodableWrapper: Encodable {
             try encodeSingleValue(stringConvertible.description)
 
         case .dictionary(let dictionary):
-            var container = encoder.container(keyedBy: CodingKeys.self)
+            var container = encoder.container(keyedBy: StringCodingKey.self)
             for (key, value) in dictionary.sorted(by: { $0.key < $1.key }) {
+                guard let key = StringCodingKey(stringValue: key) else { continue }
+
                 let encodableWrapper = MetadataValueEncodableWrapper(metadataValue: value)
-                try container.encode(encodableWrapper, forKey: CodingKeys(stringValue: key)!)
+                try container.encode(encodableWrapper, forKey: key)
             }
 
         case .array(let array):
