@@ -6,20 +6,19 @@ import Logging
 import LoggingManager
 import SessionManager
 
-final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
+final class LoggingManagerImpl<SM: SessionManager, LMP: LoggingManagerProvider>: LoggingManager {
     private let environment: Environment
-    private let logEntryEncryptor: LogEntryEncryptor
-    private let logsDirectoryURL: URL
-    private let sessionManager: SessionManager
-
-    private let logsFileName = "test.kplogs" // UUID().uuidString + ".kplogs"
-    private lazy var logsFileURL = logsDirectoryURL.appending(path: logsFileName)
+    private let sessionManager: SM
+    private let provider: LMP
 
     private let fileManager = FileManager.default
+    private let logsFileName = UUID().uuidString + ".kplogs"
+
+    private lazy var logsFileURL = provider.logsFileURL(for: logsFileName)
     private lazy var fileHandle: FileHandle? = {
         do {
-            createLogsDirectoryifNeeded()
-            createLogsFileIfNeeded()
+            try createLogsDirectoryifNeeded()
+            try createLogsFileIfNeeded()
 
             return try FileHandle(forWritingTo: logsFileURL)
         } catch {
@@ -28,16 +27,10 @@ final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
         }
     }()
 
-    init(
-        environment: Environment,
-        logEntryEncryptor: LogEntryEncryptor,
-        logsDirectoryURL: URL,
-        sessionManager: SM
-    ) {
+    init(environment: Environment, sessionManager: SM, provider: LMP) {
         self.environment = environment
-        self.logEntryEncryptor = logEntryEncryptor
-        self.logsDirectoryURL = logsDirectoryURL
         self.sessionManager = sessionManager
+        self.provider = provider
     }
 
     deinit {
@@ -48,24 +41,18 @@ final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
         }
     }
 
-    private func createLogsDirectoryifNeeded() {
+    private func createLogsDirectoryifNeeded() throws {
         let logsDirectoryURL = logsFileURL.deletingLastPathComponent()
 
         guard !fileManager.directoryExists(at: logsDirectoryURL) else { return }
 
-        do {
-            try fileManager.createDirectory(at: logsDirectoryURL)
-        } catch {
-            assertionFailure(error.localizedDescription)
-        }
+        try fileManager.createDirectory(at: logsDirectoryURL)
     }
 
-    private func createLogsFileIfNeeded() {
+    private func createLogsFileIfNeeded() throws {
         guard !fileManager.fileExists(at: logsFileURL) else { return }
 
-        if !fileManager.createFile(at: logsFileURL, contents: nil) {
-            assertionFailure()
-        }
+        try fileManager.createFile(at: logsFileURL, contents: nil)
     }
 
     private func makeLogHandlers(with label: String) -> [any LogHandler] {
@@ -78,7 +65,7 @@ final class LoggingManagerImpl<SM: SessionManager>: LoggingManager {
                 label: label,
                 logsFileURL: logsFileURL,
                 fileHandle: fileHandle,
-                logEntryEncryptor: logEntryEncryptor,
+                logEntryEncryptor: provider.encryptionKey.map(LogEntryEncryptor.init),
                 sessionNumberResolver: { [weak self] in self?.sessionManager.subject.value }
             )
         }()

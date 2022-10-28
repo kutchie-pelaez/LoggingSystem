@@ -1,8 +1,8 @@
 public struct LogEntryDecryptor {
-    private let secret: String
+    private let decryptionKey: String
 
-    public init(secret: String) {
-        self.secret = secret
+    public init(decryptionKey: String) {
+        self.decryptionKey = decryptionKey
     }
 
     public func decrypt(_ log: String) -> String {

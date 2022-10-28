@@ -23,6 +23,8 @@ let package = Package(
         ]),
         .target(name: "LogsExtractor"),
         .target(name: "LogsExtractorImpl", dependencies: [
+            .product(name: "Core", package: "Core"),
+            .product(name: "CoreUtils", package: "Core"),
             .target(name: "LogEntryEncryption"),
             .target(name: "LogsExtractor")
         ]),

@@ -7,17 +7,26 @@ import SessionManager
 public enum LoggerFactory {
     public static func produce(
         environment: Environment,
-        secret: String,
-        logsDirectoryURL: URL,
+        sessionManager: some SessionManager,
+        provider: some LoggingManagerProvider
+    ) -> some LoggingManager {
+        LoggingManagerImpl(
+            environment: environment,
+            sessionManager: sessionManager,
+            provider: provider
+        )
+    }
+
+    public static func produce(
+        environment: Environment,
         sessionManager: some SessionManager
     ) -> some LoggingManager {
-        let logEntryEncryptor = LogEntryEncryptor(secret: secret)
+        let provider = DefaultLoggingManagerProvider()
 
         return LoggingManagerImpl(
             environment: environment,
-            logEntryEncryptor: logEntryEncryptor,
-            logsDirectoryURL: logsDirectoryURL,
-            sessionManager: sessionManager
+            sessionManager: sessionManager,
+            provider: provider
         )
     }
 }

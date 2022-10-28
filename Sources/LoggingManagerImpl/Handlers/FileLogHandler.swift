@@ -4,13 +4,13 @@ import Foundation
 import LogEntryEncryption
 import Logging
 
-struct FileLogHandler: LogHandler {
-    private static let queue = DispatchQueue(label: "com.kutchie-pelaez.Logging")
+private let loggingQueue = DispatchQueue(label: "com.kutchie-pelaez.Logging")
 
+struct FileLogHandler: LogHandler {
     private let label: String
     private let logsFileURL: URL
     private let fileHandle: FileHandle
-    private let logEntryEncryptor: LogEntryEncryptor
+    private let logEntryEncryptor: LogEntryEncryptor?
     private let sessionNumberResolver: Resolver<Int?>
 
     private let dateFormatter = LogDateFormatter()
@@ -20,7 +20,7 @@ struct FileLogHandler: LogHandler {
         label: String,
         logsFileURL: URL,
         fileHandle: FileHandle,
-        logEntryEncryptor: LogEntryEncryptor,
+        logEntryEncryptor: LogEntryEncryptor?,
         sessionNumberResolver: @escaping Resolver<Int?>
     ) {
         self.label = label
@@ -58,15 +58,19 @@ struct FileLogHandler: LogHandler {
     private func write(message: Logger.Message, with metadata: Logger.Metadata) {
         do {
             let encodedMetadata = try logEntryMetadataEncoder.encode(metadata)
-            let rawLogEntry = [message.description, encodedMetadata]
+            var logEntry = [message.description, encodedMetadata]
                 .joined(separator: " ")
-            let encryptedLogEnrty = logEntryEncryptor.encrypt(rawLogEntry)
-                .appending("\n")
+            if let logEntryEncryptor {
+                logEntry = logEntryEncryptor.encrypt(logEntry)
+                    .appending("\n")
+            } else {
+                logEntry.append("\n")
+            }
 
-            guard let logEnrtyData = encryptedLogEnrty.data(using: .utf8) else {
+            guard let logEnrtyData = logEntry.data(using: .utf8) else {
                 throw ContextError(
                     message: "Failed to get utf8 data from encrypted log enrty",
-                    context: encryptedLogEnrty
+                    context: logEntry
                 )
             }
 
@@ -93,7 +97,7 @@ struct FileLogHandler: LogHandler {
         level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?,
         source: String, file: String, function: String, line: UInt
     ) {
-        Self.queue.async {
+        loggingQueue.async {
             let metadata = mergedMetadata(
                 logMetadata: metadata, level: level,
                 source: source, file: file, function: function, line: line

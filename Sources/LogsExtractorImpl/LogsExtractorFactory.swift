@@ -1,17 +1,15 @@
+import Core
 import Foundation
-import LogEntryEncryption
 import LogsExtractor
 
 public enum LogsExtractorFactory {
-    public static func produce(
-        secret: String,
-        logsDirectoryURL: URL
-    ) -> some LogsExtractor {
-        let logEntryDecryptor = LogEntryDecryptor(secret: secret)
+    public static func produce(provider: some LogsExtractorProvider) -> some LogsExtractor {
+        LogsExtractorImpl(provider: provider)
+    }
 
-        return LogsExtractorImpl(
-            logEntryDecryptor: logEntryDecryptor,
-            logsDirectoryURL: logsDirectoryURL
-        )
+    public static func produce() -> some LogsExtractor {
+        let provider = DefaultLogsExtractorProvider()
+
+        return LogsExtractorImpl(provider: provider)
     }
 }
