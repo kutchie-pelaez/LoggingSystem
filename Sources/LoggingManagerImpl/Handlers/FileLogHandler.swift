@@ -45,18 +45,13 @@ struct FileLogHandler: LogHandler {
     }
 
     private func makeHeaderMetadata() -> Logger.Metadata {
-        var headerMetadata: Logger.Metadata = [
-            "sessionNumber": "\(sessionNumber)"
+        let versionString = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+        let version = safeUndefinedIfNil(versionString.flatMap { try? Version($0) }?.description, "n/a")
+
+        return [
+            "sessionNumber": "\(sessionNumber)",
+            "version": "\(version)",
         ]
-
-        if
-            let versionString = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
-            let version = try? Version(versionString)
-        {
-            headerMetadata["version"] = "\(version.description)"
-        }
-
-        return headerMetadata
     }
 
     private func makeMergedMetadata(
@@ -67,13 +62,13 @@ struct FileLogHandler: LogHandler {
         let fileLastComponent = safeUndefinedIfNil(file.split(separator: "/").last, "n/a")
 
         let coreMetadata: Logger.Metadata = [
-            "timestamp": "\(timestamp)",
-            "level": "\(level)",
-            "label": "\(label)",
-            "source": "\(source)",
-            "function": "\(function)",
             "file": "\(fileLastComponent)",
+            "function": "\(function)",
+            "label": "\(label)",
+            "level": "\(level)",
             "line": "\(line)",
+            "source": "\(source)",
+            "timestamp": "\(timestamp)",
         ]
 
         return coreMetadata
@@ -125,7 +120,6 @@ struct FileLogHandler: LogHandler {
     ) {
         loggingQueue.async {
             writeHeaderIfNeeded()
-
             let metadata = makeMergedMetadata(
                 logMetadata: metadata, level: level,
                 source: source, file: file, function: function, line: line

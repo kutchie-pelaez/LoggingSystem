@@ -10,6 +10,13 @@ final class LogsViewerViewController: ViewController {
     }
 
     override func viewDidLoad() {
-
+        do {
+            let entries = try repository.entries(for: nil)
+            print("=================")
+            print(entries)
+        } catch {
+            print("=================")
+            print(error)
+        }
     }
 }

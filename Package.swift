@@ -29,6 +29,7 @@ let package = Package(
             .product(name: "Core", package: "Core"),
             .product(name: "CoreUI", package: "Core"),
             .product(name: "Logging", package: "swift-log"),
+            .product(name: "Version", package: "Version"),
             .target(name: "LogEntryEncryption")
         ]),
         .target(name: "LogsExtractor"),
