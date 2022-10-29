@@ -27,7 +27,7 @@ struct LogsQuery {
 
 enum LogEntriesRepositoryError: Error {
     case noEntries
-    case invalidDecryptionKey
+    case invalidDecryptionKey(description: String)
     case noHeaderForEntry(rawEntry: String)
     case invalidHeader(rawHeader: String)
     case invalidEntry(rawEntry: String)
@@ -37,7 +37,7 @@ enum LogEntriesRepositoryError: Error {
 final class LogEntriesRepository {
     private static let dateFormatter: DateFormatter = {
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = ""
+        dateFormatter.dateFormat = "dd-MM-yyyy HH:mm:ssZ"
 
         return dateFormatter
     }()
@@ -100,7 +100,15 @@ final class LogEntriesRepository {
         logEntries.reserveCapacity(rawLogEntries.count)
 
         while rawLogEntries.isNotEmpty {
-            let rawEntry = String(rawLogEntries.removeFirst())
+            var rawEntry = String(rawLogEntries.removeFirst())
+
+            if let logEntryDecryptor {
+                do {
+                    rawEntry = try logEntryDecryptor.decrypt(rawEntry)
+                } catch {
+                    throw LogEntriesRepositoryError.invalidDecryptionKey(description: error.localizedDescription)
+                }
+            }
 
             guard !rawEntry.starts(with: "{") else {
                 if let metadata = try? metadataDecoder.decode(rawEntry) {
@@ -113,9 +121,10 @@ final class LogEntriesRepository {
             }
 
             let messageAndMetadata = rawEntry
-                .split(separator: " ", maxSplits: 2)
+                .split(maxSplits: 2) { $0.isWhitespace && $1 == "{" }
                 .map(String.init)
-            let message = messageAndMetadata[safe: 0]
+            let message = messageAndMetadata[safe: 0]?
+                .trimmingCharacters(in: .whitespaces)
             let rawMetadata = messageAndMetadata[safe: 1]
 
             guard let message, let rawMetadata, var metadata = try? metadataDecoder.decode(rawMetadata) else {

@@ -7,7 +7,7 @@ public struct LogEntryEncryptor {
 
     // TODO: - Implement encryption
 
-    public func encrypt(_ log: String) -> String {
+    public func encrypt(_ log: String) throws -> String {
         log
     }
 }

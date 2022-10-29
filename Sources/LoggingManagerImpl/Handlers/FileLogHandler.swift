@@ -84,7 +84,11 @@ struct FileLogHandler: LogHandler {
                 .joined(separator: " ")
 
             if let logEntryEncryptor {
-                logEntry = logEntryEncryptor.encrypt(logEntry)
+                do {
+                    logEntry = try logEntryEncryptor.encrypt(logEntry)
+                } catch {
+                    assertionFailure(error.localizedDescription)
+                }
             }
             logEntry.append("\n")
 
