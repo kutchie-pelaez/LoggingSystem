@@ -3,37 +3,68 @@ import CoreUtils
 import Foundation
 import LogEntryEncryption
 import Logging
+import Version
 
 private let loggingQueue = DispatchQueue(label: "com.kutchie-pelaez.Logging")
+private let dateFormatter = LogDateFormatter()
+private let logEntryMetadataEncoder = LogEntryMetadataEncoder()
+
+protocol FileLogHandlerDelegate: AnyObject {
+    func fileLogHandlerDidWriteHeader()
+}
 
 struct FileLogHandler: LogHandler {
+    weak var delegate: FileLogHandlerDelegate?
+
     private let label: String
     private let fileHandle: FileHandle
     private let logEntryEncryptor: LogEntryEncryptor?
-    private let sessionNumberResolver: Resolver<Int?>
-
-    private let dateFormatter = LogDateFormatter()
-    private let logEntryMetadataEncoder = LogEntryMetadataEncoder()
+    private let sessionNumber: Int
+    private let shouldWriteHeader: Resolver<Bool>
 
     init(
         label: String,
         fileHandle: FileHandle,
         logEntryEncryptor: LogEntryEncryptor?,
-        sessionNumberResolver: @escaping Resolver<Int?>
+        sessionNumber: Int,
+        shouldWriteHeader: @escaping Resolver<Bool>
     ) {
         self.label = label
         self.fileHandle = fileHandle
         self.logEntryEncryptor = logEntryEncryptor
-        self.sessionNumberResolver = sessionNumberResolver
+        self.sessionNumber = sessionNumber
+        self.shouldWriteHeader = shouldWriteHeader
     }
 
-    private func mergedMetadata(
+    private func writeHeaderIfNeeded() {
+        guard shouldWriteHeader() else { return }
+
+        delegate?.fileLogHandlerDidWriteHeader()
+        let headerMetadata = makeHeaderMetadata()
+        write(message: nil, with: headerMetadata)
+    }
+
+    private func makeHeaderMetadata() -> Logger.Metadata {
+        var headerMetadata: Logger.Metadata = [
+            "sessionNumber": "\(sessionNumber)"
+        ]
+
+        if
+            let versionString = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
+            let version = try? Version(versionString)
+        {
+            headerMetadata["version"] = "\(version.description)"
+        }
+
+        return headerMetadata
+    }
+
+    private func makeMergedMetadata(
         logMetadata: Logger.Metadata?, level: Logger.Level,
         source: String, file: String, function: String, line: UInt
     ) -> Logger.Metadata {
         let timestamp = dateFormatter.currentTimestamp()
         let fileLastComponent = safeUndefinedIfNil(file.split(separator: "/").last, "n/a")
-        let sessionNumber = safeUndefinedIfNil(sessionNumberResolver().map(String.init), "n/a")
 
         let coreMetadata: Logger.Metadata = [
             "timestamp": "\(timestamp)",
@@ -43,7 +74,6 @@ struct FileLogHandler: LogHandler {
             "function": "\(function)",
             "file": "\(fileLastComponent)",
             "line": "\(line)",
-            "sessionNumber": "\(sessionNumber)"
         ]
 
         return coreMetadata
@@ -51,17 +81,17 @@ struct FileLogHandler: LogHandler {
             .appending(logMetadata)
     }
 
-    private func write(message: Logger.Message, with metadata: Logger.Metadata) {
+    private func write(message: Logger.Message?, with metadata: Logger.Metadata) {
         do {
             let encodedMetadata = try logEntryMetadataEncoder.encode(metadata)
-            var logEntry = [message.description, encodedMetadata]
+            var logEntry = [message?.description, encodedMetadata]
+                .unwrapped()
                 .joined(separator: " ")
+
             if let logEntryEncryptor {
                 logEntry = logEntryEncryptor.encrypt(logEntry)
-                    .appending("\n")
-            } else {
-                logEntry.append("\n")
             }
+            logEntry.append("\n")
 
             guard let logEnrtyData = logEntry.data(using: .utf8) else {
                 throw ContextError(
@@ -94,7 +124,9 @@ struct FileLogHandler: LogHandler {
         source: String, file: String, function: String, line: UInt
     ) {
         loggingQueue.async {
-            let metadata = mergedMetadata(
+            writeHeaderIfNeeded()
+
+            let metadata = makeMergedMetadata(
                 logMetadata: metadata, level: level,
                 source: source, file: file, function: function, line: line
             )

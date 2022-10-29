@@ -16,7 +16,8 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
         .package(url: "https://github.com/kutchie-pelaez-packages/Builder.git", branch: "master"),
         .package(url: "https://github.com/kutchie-pelaez-packages/Core.git", branch: "master"),
-        .package(url: "https://github.com/kutchie-pelaez-packages/SessionManager.git", branch: "master")
+        .package(url: "https://github.com/kutchie-pelaez-packages/SessionManager.git", branch: "master"),
+        .package(url: "https://github.com/kutchie-pelaez-packages/Version.git", branch: "master")
     ],
     targets: [
         .target(name: "LogEntryEncryption", dependencies: [
@@ -45,6 +46,7 @@ let package = Package(
             .product(name: "CoreUtils", package: "Core"),
             .product(name: "Logging", package: "swift-log"),
             .product(name: "SessionManager", package: "SessionManager"),
+            .product(name: "Version", package: "Version"),
             .target(name: "LogEntryEncryption"),
             .target(name: "LoggingManager")
         ])

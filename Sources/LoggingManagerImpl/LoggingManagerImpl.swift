@@ -6,13 +6,17 @@ import Logging
 import LoggingManager
 import SessionManager
 
-final class LoggingManagerImpl<SM: SessionManager, LMP: LoggingManagerProvider>: LoggingManager {
+final class LoggingManagerImpl<
+    SM: SessionManager,
+    LMP: LoggingManagerProvider
+>: LoggingManager, FileLogHandlerDelegate {
     private let environment: Environment
     private let sessionManager: SM
     private let provider: LMP
 
     private let fileManager = FileManager.default
     private let logsFileName = UUID().uuidString + ".kplogs"
+    private var isHeaderWritten = false
 
     private lazy var logsFileURL = provider.logsFileURL(for: logsFileName)
     private lazy var fileHandle: FileHandle? = {
@@ -61,12 +65,20 @@ final class LoggingManagerImpl<SM: SessionManager, LMP: LoggingManagerProvider>:
                 return Optional<FileLogHandler>.none
             }
 
-            return FileLogHandler(
+            var fileLogHandler = FileLogHandler(
                 label: label,
                 fileHandle: fileHandle,
                 logEntryEncryptor: provider.encryptionKey.map(LogEntryEncryptor.init),
-                sessionNumberResolver: { [weak self] in self?.sessionManager.subject.value }
+                sessionNumber: sessionManager.subject.value,
+                shouldWriteHeader: { [weak self] in
+                    guard let self else { return false }
+
+                    return !self.isHeaderWritten
+                }
             )
+            fileLogHandler.delegate = self
+
+            return fileLogHandler
         }()
 
         let stdoutLogHandler = {
@@ -90,5 +102,11 @@ final class LoggingManagerImpl<SM: SessionManager, LMP: LoggingManagerProvider>:
 
             return MultiplexLogHandler(logHandlers)
         }
+    }
+
+    // MARK: FileLogHandlerDelegate
+
+    func fileLogHandlerDidWriteHeader() {
+        isHeaderWritten = true
     }
 }
