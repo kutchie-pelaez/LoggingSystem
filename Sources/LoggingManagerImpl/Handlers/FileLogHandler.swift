@@ -8,7 +8,6 @@ private let loggingQueue = DispatchQueue(label: "com.kutchie-pelaez.Logging")
 
 struct FileLogHandler: LogHandler {
     private let label: String
-    private let logsFileURL: URL
     private let fileHandle: FileHandle
     private let logEntryEncryptor: LogEntryEncryptor?
     private let sessionNumberResolver: Resolver<Int?>
@@ -18,13 +17,11 @@ struct FileLogHandler: LogHandler {
 
     init(
         label: String,
-        logsFileURL: URL,
         fileHandle: FileHandle,
         logEntryEncryptor: LogEntryEncryptor?,
         sessionNumberResolver: @escaping Resolver<Int?>
     ) {
         self.label = label
-        self.logsFileURL = logsFileURL
         self.fileHandle = fileHandle
         self.logEntryEncryptor = logEntryEncryptor
         self.sessionNumberResolver = sessionNumberResolver
@@ -35,20 +32,19 @@ struct FileLogHandler: LogHandler {
         source: String, file: String, function: String, line: UInt
     ) -> Logger.Metadata {
         let timestamp = dateFormatter.currentTimestamp()
-        var coreMetadata: Logger.Metadata = [
+        let fileLastComponent = safeUndefinedIfNil(file.split(separator: "/").last, "n/a")
+        let sessionNumber = safeUndefinedIfNil(sessionNumberResolver().map(String.init), "n/a")
+
+        let coreMetadata: Logger.Metadata = [
             "timestamp": "\(timestamp)",
-            "label": "\(label)",
             "level": "\(level)",
+            "label": "\(label)",
             "source": "\(source)",
             "function": "\(function)",
-            "line": "\(line)"
+            "file": "\(fileLastComponent)",
+            "line": "\(line)",
+            "sessionNumber": "\(sessionNumber)"
         ]
-        if let fileLastComponent = file.split(separator: "/").last {
-            coreMetadata["file"] = "\(fileLastComponent)"
-        }
-        if let sessionNumber = sessionNumberResolver() {
-            coreMetadata["sessionNumber"] = "\(sessionNumber)"
-        }
 
         return coreMetadata
             .appending(metadata)

@@ -63,7 +63,6 @@ final class LoggingManagerImpl<SM: SessionManager, LMP: LoggingManagerProvider>:
 
             return FileLogHandler(
                 label: label,
-                logsFileURL: logsFileURL,
                 fileHandle: fileHandle,
                 logEntryEncryptor: provider.encryptionKey.map(LogEntryEncryptor.init),
                 sessionNumberResolver: { [weak self] in self?.sessionManager.subject.value }

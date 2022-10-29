@@ -5,6 +5,8 @@ public struct LogEntryEncryptor {
         self.encryptionKey = encryptionKey
     }
 
+    // TODO: - Implement encryption
+
     public func encrypt(_ log: String) -> String {
         log
     }
