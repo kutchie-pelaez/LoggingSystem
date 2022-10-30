@@ -64,12 +64,12 @@ final class LogsViewerViewController<AB: AlertBuilder>: ViewController {
                 self.present(activityViewController, animated: true)
             })
         }
+        navigationItem.leftBarButtonItem = itemsProvider.makeLeftNavigationItem()
         navigationItem.rightBarButtonItem = itemsProvider.makeRightNavigationItem { [weak self] in
             self?.dismiss(animated: true)
         }
-        toolbarItems = itemsProvider.makeToolbarItems(searchClosure: {
-
-        })
+        navigationItem.searchController = UISearchController()
+        navigationItem.preferredSearchBarPlacement = .stacked
     }
 
     private func configureViews() {

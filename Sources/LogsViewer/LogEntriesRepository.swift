@@ -19,6 +19,7 @@ struct LogEntry {
 }
 
 struct LogsQuery {
+    let input: String?
     let levels: Set<Logger.Level>?
     let sessionNumbersRange: ClosedRange<Int>?
     let versionsRange: ClosedRange<Version>?
@@ -34,7 +35,7 @@ enum LogEntriesRepositoryError: Error {
     case invalidMetadata(description: String)
 }
 
-final class LogEntriesRepository {
+final class LogEntriesRepository: LogsViewerItemsProviderDataSource {
     private static let dateFormatter: DateFormatter = {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "dd-MM-yyyy HH:mm:ssZ"
@@ -72,6 +73,9 @@ final class LogEntriesRepository {
             if let datesRange = query.datesRange {
                 entries = entries.filter { datesRange ~= $0.date }
             }
+            if let input = query.input {
+                entries = entriesFilteredByInput(entries: entries, input: input)
+            }
 
             return entries
 
@@ -83,6 +87,47 @@ final class LogEntriesRepository {
     func setDecryptionKey(_ decryptionKey: String) {
         logEntryDecryptor = LogEntryDecryptor(decryptionKey: decryptionKey)
         entriesResult = recreateEntries()
+    }
+
+    private func entriesFilteredByInput(entries: [LogEntry], input: String) -> [LogEntry] {
+        entries.filter { entry in
+            let messageCondition = entry.message.contains(input)
+            let functionCondition = entry.function.contains(input)
+            let fileCondition = entry.file.contains(input)
+
+            var metadataCondition = true
+            metadataOuterClause:
+            if let metatadaValues = entry.metadata.map(Logger.MetadataValue.dictionary).map(metatadaStringValues) {
+                for metatadaValue in metatadaValues {
+                    guard metatadaValue.contains(input) else { continue }
+
+                    break metadataOuterClause
+                }
+                metadataCondition = false
+            }
+
+            return messageCondition || functionCondition || fileCondition || metadataCondition
+        }
+    }
+
+    private func metatadaStringValues(form metadataValue: Logger.MetadataValue) -> [String] {
+        switch metadataValue {
+        case .dictionary(let dictionary):
+            return dictionary
+                .map { metatadaStringValues(form: $1) }
+                .flatten()
+
+        case .array(let array):
+            return array
+                .map(metatadaStringValues)
+                .flatten()
+
+        case .string(let string):
+            return [string]
+
+        case .stringConvertible(let stringConvertible):
+            return [stringConvertible.description]
+        }
     }
 
     private func recreateEntries() -> Result<[LogEntry], LogEntriesRepositoryError> {
@@ -181,14 +226,16 @@ final class LogEntriesRepository {
         let encryptedLogs = logEntryDecryptor.map { _ in logs }
 
         do {
-            try fileManager.createDirectory(at: logFilesURLProvider.decryptedFileURL.deletingLastPathComponent())
+            try fileManager.removeItem(at: logFilesURLProvider.logsDirectoryURL)
+
+            try fileManager.createDirectory(at: logFilesURLProvider.decryptedDirectoryURL)
             try fileManager.createFile(
                 at: logFilesURLProvider.decryptedFileURL,
                 contents: decryptedLogs, overwrite: true
             )
 
             if let encryptedLogs {
-                try fileManager.createDirectory(at: logFilesURLProvider.encryptedFileURL.deletingLastPathComponent())
+                try fileManager.createDirectory(at: logFilesURLProvider.encryptedDirectoryURL)
                 try fileManager.createFile(
                     at: logFilesURLProvider.encryptedFileURL,
                     contents: encryptedLogs, overwrite: true
@@ -255,5 +302,36 @@ final class LogEntriesRepository {
         }
 
         return version
+    }
+
+    private func requestLogEntriesGroups<T: Hashable & Comparable>(
+        _ keyPath: KeyPath<LogEntry, T>
+    ) -> [LogEntriesGroup<T>] {
+        guard let entries = entriesResult.success else { return [] }
+
+        var exntryValueToCount = [T: Int]()
+
+        for entry in entries {
+            let value = entry[keyPath: keyPath]
+            exntryValueToCount[value] = (exntryValueToCount[value] ?? 0) + 1
+        }
+
+        return exntryValueToCount
+            .map(LogEntriesGroup.init)
+            .sorted { $0.term < $1.term }
+    }
+
+    // MARK: LogsViewerItemsProviderDataSource
+
+    func avalilableLevelsDidReqest() -> [LogEntriesGroup<Logger.Level>] {
+        requestLogEntriesGroups(\.level)
+    }
+
+    func avalilableLabelsDidReqest() -> [LogEntriesGroup<String>] {
+        requestLogEntriesGroups(\.label)
+    }
+
+    func avalilableSourcesDidReqest() -> [LogEntriesGroup<String>] {
+        requestLogEntriesGroups(\.source)
     }
 }

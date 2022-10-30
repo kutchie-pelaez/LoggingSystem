@@ -38,6 +38,7 @@ public struct LogViewerBuilder<LVD: LogViewerDependencies>: Builder {
         )
 
         let itemsProvider = LogsViewerItemsProvider(logFilesURLProvider: logFilesURLProvider)
+        itemsProvider.dataSource = repository
 
         let viewController = LogsViewerViewController(
             name: nameWithoutExtension,

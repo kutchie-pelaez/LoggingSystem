@@ -1,16 +1,29 @@
 import Core
 import CoreUI
+import LinkPresentation
+import Logging
 import UIKit
 
 private enum SFSymbols: SFSymbolsCollection {
     case ellipsisCircle
-    case magnifyingglass
     case squareAndArrowUp
 }
 
-struct LogsViewerItemsProvider {
-    private let logFilesURLProvider: LogFilesURLProvider
+struct LogEntriesGroup<T> {
+    let term: T
+    let entriesCount: Int
+}
 
+protocol LogsViewerItemsProviderDataSource: AnyObject {
+    func avalilableLevelsDidReqest() -> [LogEntriesGroup<Logger.Level>]
+    func avalilableLabelsDidReqest() -> [LogEntriesGroup<String>]
+    func avalilableSourcesDidReqest() -> [LogEntriesGroup<String>]
+}
+
+final class LogsViewerItemsProvider {
+    weak var dataSource: LogsViewerItemsProviderDataSource?
+
+    private let logFilesURLProvider: LogFilesURLProvider
     private let fileManager = FileManager.default
 
     init(logFilesURLProvider: LogFilesURLProvider) {
@@ -44,22 +57,50 @@ struct LogsViewerItemsProvider {
         ])
     }
 
+    func makeLeftNavigationItem() -> UIBarButtonItem {
+        UIBarButtonItem(image: SFSymbols.ellipsisCircle.image, menu: UIMenu(children: [
+            makeLevelFilterItem(),
+            makeLabelFilterItem(),
+            makeSourceFilterItem()
+        ].unwrapped()))
+    }
+
     func makeRightNavigationItem(closure: @escaping Closure) -> UIBarButtonItem {
-        UIBarButtonItem(systemItem: .done, primaryAction: UIAction { _ in
+        UIBarButtonItem(systemItem: .close, primaryAction: UIAction { _ in
             closure()
         })
     }
 
-    func makeToolbarItems(
-        searchClosure: @escaping Closure
-    ) -> [UIBarButtonItem] {
-        let toolsItem = UIBarButtonItem(image: SFSymbols.ellipsisCircle.image, menu: UIMenu(children: [
+    private func makeLevelFilterItem() -> UIMenuElement? {
+        makeFilterItem(title: "Levels", groupsResolver: dataSource?.avalilableLevelsDidReqest)
+    }
 
-        ]))
-        let searchItem = UIBarButtonItem(image: SFSymbols.magnifyingglass.image, primaryAction: UIAction { _ in
-            searchClosure()
-        })
+    private func makeLabelFilterItem() -> UIMenuElement? {
+        makeFilterItem(title: "Labels", groupsResolver: dataSource?.avalilableLabelsDidReqest)
+    }
 
-        return [toolsItem, .flexibleSpace(), searchItem]
+    private func makeSourceFilterItem() -> UIMenuElement? {
+        makeFilterItem(title: "Sources", groupsResolver: dataSource?.avalilableSourcesDidReqest)
+    }
+
+    private func makeFilterItem<T>(
+        title: String,
+        groupsResolver: (() -> [LogEntriesGroup<T>])?
+    ) -> UIMenuElement? {
+        guard let groups = groupsResolver?(), groups.count > 1 else { return nil }
+
+        return UIMenu(title: title, children: [
+            UIAction(title: "All", state: .on, handler: { _ in
+
+            }),
+            UIMenu(options: .displayInline, children: groups.map { group in
+                let title = "\(group.term)"
+                let subtitle = "\(group.entriesCount) entries"
+
+                return UIAction(title: title, subtitle: subtitle, state: .off, handler: { _ in
+                    print(group.term)
+                })
+            })
+        ])
     }
 }
