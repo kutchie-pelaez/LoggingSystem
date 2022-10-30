@@ -32,6 +32,7 @@ struct LogEntriesGroup<T> {
 }
 
 protocol LogsViewerItemsProviderDataSource: AnyObject {
+    func avalilableEntryTypesDidReqest() -> [LogEntriesGroup<LogEntryType>]
     func avalilableLevelsDidReqest() -> [LogEntriesGroup<Logger.Level>]
     func avalilableLabelsDidReqest() -> [LogEntriesGroup<String>]
     func avalilableSourcesDidReqest() -> [LogEntriesGroup<String>]
@@ -81,6 +82,7 @@ final class LogsViewerItemsProvider {
                 makeGroupsSortItem()
             ]),
             UIMenu(title: "Filtering", options: .displayInline, children: [
+                makentryTypeFilterItem(),
                 makeLevelFilterItem(),
                 makeLabelFilterItem(),
                 makeSourceFilterItem()
@@ -103,6 +105,10 @@ final class LogsViewerItemsProvider {
         UIBarButtonItem(systemItem: .close, primaryAction: UIAction { _ in
             closure()
         })
+    }
+
+    private func makentryTypeFilterItem() -> UIMenuElement? {
+        makeFilterItem(title: "Entry type", groupsResolver: dataSource?.avalilableEntryTypesDidReqest)
     }
 
     private func makeLevelFilterItem() -> UIMenuElement? {
@@ -137,6 +143,7 @@ final class LogsViewerItemsProvider {
         title: String,
         groupsResolver: (() -> [LogEntriesGroup<T>])?
     ) -> UIMenuElement? {
+        // FIXME: change 0 to 1
         guard let groups = groupsResolver?(), groups.count > 0 else { return nil }
 
         return UIMenu(title: title, children: [

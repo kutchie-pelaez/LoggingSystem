@@ -5,9 +5,26 @@ import Logging
 import SignpostLogger
 import Version
 
-enum LogEntryType: String {
+enum LogEntryType: String, Comparable, CustomStringConvertible {
     case log
     case signpost
+
+    // MARK: Comparable
+
+    static func < (lhs: LogEntryType, rhs: LogEntryType) -> Bool {
+        switch (lhs, rhs) {
+        case (.log, .signpost): return false
+        case (.signpost, .log): return true
+        case (.log, .log): return false
+        case (.signpost, .signpost): return false
+        }
+    }
+
+    // MARK: CustomStringConvertible
+
+    var description: String {
+        rawValue.capitalized
+    }
 }
 
 enum LogEntry {
@@ -41,6 +58,13 @@ enum LogEntry {
 
     case log(Log)
     case signpost(Signpost)
+
+    var entryType: LogEntryType {
+        switch self {
+        case .log: return .log
+        case .signpost: return .signpost
+        }
+    }
 
     var level: Logger.Level {
         switch self {
@@ -468,10 +492,14 @@ final class LogEntriesRepository: LogsViewerItemsProviderDataSource {
 
         return exntryValueToCount
             .map(LogEntriesGroup.init)
-            .sorted { $0.term < $1.term }
+            .sorted { $0.entriesCount > $1.entriesCount }
     }
 
     // MARK: LogsViewerItemsProviderDataSource
+
+    func avalilableEntryTypesDidReqest() -> [LogEntriesGroup<LogEntryType>] {
+        requestLogEntriesGroups(\.entryType)
+    }
 
     func avalilableLevelsDidReqest() -> [LogEntriesGroup<Logger.Level>] {
         requestLogEntriesGroups(\.level)
