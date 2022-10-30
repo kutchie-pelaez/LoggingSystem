@@ -6,11 +6,12 @@ let package = Package(
     name: "LoggingSystem",
     platforms: [.iOS(.v16)],
     products: [
+        .library(name: "SignpostLogger", targets: ["SignpostLogger"]),
         .library(name: "LogsViewer", targets: ["LogsViewer"]),
         .library(name: "LogsExtractor", targets: ["LogsExtractor"]),
         .library(name: "LogsExtractorImpl", targets: ["LogsExtractorImpl"]),
         .library(name: "LoggingManager", targets: ["LoggingManager"]),
-        .library(name: "LoggingManagerImpl", targets: ["LoggingManagerImpl"]),
+        .library(name: "LoggingManagerImpl", targets: ["LoggingManagerImpl"])
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
@@ -21,6 +22,9 @@ let package = Package(
         .package(url: "https://github.com/kutchie-pelaez-packages/Version.git", branch: "master")
     ],
     targets: [
+        .target(name: "SignpostLogger", dependencies: [
+            .product(name: "Logging", package: "swift-log")
+        ]),
         .target(name: "LogEntryEncryption", dependencies: [
             .product(name: "CoreUtils", package: "Core"),
             .product(name: "Logging", package: "swift-log")
@@ -51,7 +55,8 @@ let package = Package(
             .product(name: "SessionManager", package: "SessionManager"),
             .product(name: "Version", package: "Version"),
             .target(name: "LogEntryEncryption"),
-            .target(name: "LoggingManager")
+            .target(name: "LoggingManager"),
+            .target(name: "SignpostLogger")
         ])
     ]
 )

@@ -1,32 +1,33 @@
 import Core
 import Darwin
 import Logging
+import SignpostLogger
 
 struct StdoutLogHandler: LogHandler {
     private let label: String
+    private let loggerType: LoggerType
 
     private let dateFormatter = LogDateFormatter()
 
-    init(label: String) {
+    init(label: String, loggerType: LoggerType) {
         self.label = label
+        self.loggerType = loggerType
     }
 
     private func indicator(for level: Logger.Level) -> String? {
         switch level {
-        case .notice:
-            return "👀"
+        case .notice: return "👀"
+        case .warning: return "⚠️"
+        case .error: return "⛔️"
+        case .critical: return "📛"
+        default: return nil
+        }
+    }
 
-        case .warning:
-            return "⚠️"
-
-        case .error:
-            return "⛔️"
-
-        case .critical:
-            return "📛"
-
-        default:
-            return nil
+    private func signpostIndicator(for signpostMessage: SignpostMessage) -> String {
+        switch signpostMessage {
+        case .begin: return "🚩"
+        case .end: return "🏁"
         }
     }
 
@@ -69,18 +70,46 @@ struct StdoutLogHandler: LogHandler {
         level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?,
         source _: String, file: String, function: String, line: UInt
     ) {
-        let message = [
-            dateFormatter.currentTimestamp(),
-            label.surroundedBy("[", "]"),
-            hint(file: file, function: function, line: line),
-            "-",
-            indicator(for: level),
-            message.description
-        ].unwrapped().joined(separator: " ")
-        let logEntry = StdoutLogEntry(
-            message: message,
-            metadata: self.metadata.appending(metadata)
-        )
+        let entryMessage: String
+        var metadata = self.metadata.appending(metadata)
+
+        switch loggerType {
+        case .regular:
+            entryMessage = [
+                dateFormatter.currentTimestamp(),
+                label.surroundedBy("[", "]"),
+                hint(file: file, function: function, line: line),
+                "-",
+                indicator(for: level),
+                message.description
+            ].unwrapped().joined(separator: " ")
+
+        case .signpost:
+            guard let signpostMessage = SignpostMessage(rawValue: message.description) else {
+                assertionFailure()
+                return
+            }
+
+            let signpostSplits = label.split(separator: "::")
+            let group = signpostSplits[safe: 1]
+            let label = signpostSplits[safe: 2]
+
+            guard let group, let label else {
+                assertionFailure()
+                return
+            }
+
+            entryMessage = [
+                signpostIndicator(for: signpostMessage),
+                dateFormatter.currentTimestamp(),
+                label.surroundedBy("[", "]"),
+                hint(file: file, function: function, line: line),
+                signpostIndicator(for: signpostMessage)
+            ].joined(separator: " ")
+            metadata["signpostGroup"] = "\(group)"
+        }
+
+        let logEntry = StdoutLogEntry(message: entryMessage, metadata: metadata)
         write(entry: logEntry)
     }
 }

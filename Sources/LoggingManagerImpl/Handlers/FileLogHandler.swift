@@ -3,6 +3,7 @@ import CoreUtils
 import Foundation
 import LogEntryEncryption
 import Logging
+import SignpostLogger
 import Version
 
 private let loggingQueue = DispatchQueue(label: "com.kutchie-pelaez.Logging")
@@ -17,6 +18,7 @@ struct FileLogHandler: LogHandler {
     weak var delegate: FileLogHandlerDelegate?
 
     private let label: String
+    private let loggerType: LoggerType
     private let fileHandle: FileHandle
     private let logEntryEncryptor: LogEntryEncryptor?
     private let sessionNumber: Int
@@ -24,12 +26,14 @@ struct FileLogHandler: LogHandler {
 
     init(
         label: String,
+        loggerType: LoggerType,
         fileHandle: FileHandle,
         logEntryEncryptor: LogEntryEncryptor?,
         sessionNumber: Int,
         shouldWriteHeader: @escaping Resolver<Bool>
     ) {
         self.label = label
+        self.loggerType = loggerType
         self.fileHandle = fileHandle
         self.logEntryEncryptor = logEntryEncryptor
         self.sessionNumber = sessionNumber
@@ -50,30 +54,45 @@ struct FileLogHandler: LogHandler {
 
         return [
             "sessionNumber": "\(sessionNumber)",
-            "version": "\(version)",
+            "version": "\(version)"
         ]
     }
 
     private func makeMergedMetadata(
-        logMetadata: Logger.Metadata?, level: Logger.Level,
+        message: Logger.Message, logMetadata: Logger.Metadata?, level: Logger.Level,
         source: String, file: String, function: String, line: UInt
     ) -> Logger.Metadata {
         let timestamp = dateFormatter.currentTimestamp()
         let fileLastComponent = safeUndefinedIfNil(file.split(separator: "/").last, "n/a")
 
-        let coreMetadata: Logger.Metadata = [
+        var coreMetadata: Logger.Metadata = [
             "file": "\(fileLastComponent)",
             "function": "\(function)",
-            "label": "\(label)",
-            "level": "\(level)",
             "line": "\(line)",
             "source": "\(source)",
-            "timestamp": "\(timestamp)",
+            "timestamp": "\(timestamp)"
         ]
 
-        return coreMetadata
-            .appending(metadata)
-            .appending(logMetadata)
+        switch loggerType {
+        case .regular:
+            coreMetadata["label"] = "\(label)"
+            coreMetadata["level"] = "\(level)"
+
+        case .signpost:
+            let signpostSplits = label.split(separator: "::")
+            let group = signpostSplits[safe: 1]
+            let label = signpostSplits[safe: 2]
+
+            guard let group, let label, SignpostMessage(rawValue: message.description) != nil else {
+                assertionFailure()
+                break
+            }
+
+            coreMetadata["label"] = "\(label)"
+            coreMetadata["signpostGroup"] = "\(group)"
+        }
+
+        return coreMetadata.appending(metadata).appending(logMetadata)
     }
 
     private func write(message: Logger.Message?, with metadata: Logger.Metadata) {
@@ -125,7 +144,7 @@ struct FileLogHandler: LogHandler {
         loggingQueue.async {
             writeHeaderIfNeeded()
             let metadata = makeMergedMetadata(
-                logMetadata: metadata, level: level,
+                message: message, logMetadata: metadata, level: level,
                 source: source, file: file, function: function, line: line
             )
             write(message: message, with: metadata)

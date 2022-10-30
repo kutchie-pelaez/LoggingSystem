@@ -60,6 +60,8 @@ final class LoggingManagerImpl<
     }
 
     private func makeLogHandlers(with label: String) -> [any LogHandler] {
+        let loggerType = LoggerType(from: label)
+
         let fileLogHandler = {
             guard let fileHandle else {
                 return Optional<FileLogHandler>.none
@@ -67,6 +69,7 @@ final class LoggingManagerImpl<
 
             var fileLogHandler = FileLogHandler(
                 label: label,
+                loggerType: loggerType,
                 fileHandle: fileHandle,
                 logEntryEncryptor: provider.encryptionKey.map(LogEntryEncryptor.init),
                 sessionNumber: sessionManager.subject.value,
@@ -86,7 +89,10 @@ final class LoggingManagerImpl<
                 return Optional<StdoutLogHandler>.none
             }
 
-            return StdoutLogHandler(label: label)
+            return StdoutLogHandler(
+                label: label,
+                loggerType: loggerType
+            )
         }()
 
         return [fileLogHandler, stdoutLogHandler].unwrapped()
