@@ -70,7 +70,7 @@ struct StdoutLogHandler: LogHandler {
         source _: String, file: String, function: String, line: UInt
     ) {
         let message = [
-            dateFormatter.currentTimestamp().surroundedBy("[", "]"),
+            dateFormatter.currentTimestamp(),
             label.surroundedBy("[", "]"),
             hint(file: file, function: function, line: line),
             "-",
