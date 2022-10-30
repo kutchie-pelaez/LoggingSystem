@@ -45,7 +45,7 @@ struct FileLogHandler: LogHandler {
 
         delegate?.fileLogHandlerDidWriteHeader()
         let headerMetadata = makeHeaderMetadata()
-        write(message: nil, with: headerMetadata)
+        write(message: "SESSION_HEADER", with: headerMetadata)
     }
 
     private func makeHeaderMetadata() -> Logger.Metadata {

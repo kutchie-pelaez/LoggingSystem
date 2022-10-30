@@ -38,7 +38,6 @@ protocol LogsViewerItemsProviderDataSource: AnyObject {
 }
 
 final class LogsViewerItemsProvider {
-    var call: Closure?
     weak var dataSource: LogsViewerItemsProviderDataSource?
 
     private let logFilesURLProvider: LogFilesURLProvider

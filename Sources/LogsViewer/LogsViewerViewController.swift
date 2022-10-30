@@ -48,9 +48,6 @@ final class LogsViewerViewController<AB: AlertBuilder>: ViewController {
         configureViews()
         handle(error: .noEntries)
         perform(query: nil)
-        itemsProvider.call = {
-            self.navigationItem.leftBarButtonItem = self.itemsProvider.makeLeftNavigationItem()
-        }
     }
 
     private func configureNavigationBar() {

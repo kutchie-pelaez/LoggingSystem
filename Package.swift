@@ -36,7 +36,8 @@ let package = Package(
             .product(name: "CoreUI", package: "Core"),
             .product(name: "Logging", package: "swift-log"),
             .product(name: "Version", package: "Version"),
-            .target(name: "LogEntryEncryption")
+            .target(name: "LogEntryEncryption"),
+            .target(name: "SignpostLogger")
         ]),
         .target(name: "LogsExtractor"),
         .target(name: "LogsExtractorImpl", dependencies: [

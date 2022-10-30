@@ -2,20 +2,108 @@ import Core
 import Foundation
 import LogEntryEncryption
 import Logging
+import SignpostLogger
 import Version
 
-struct LogEntry {
-    let message: String
-    let metadata: Logger.Metadata?
-    let date: Date
-    let level: Logger.Level
-    let label: String
-    let source: String
-    let function: String
-    let file: String
-    let line: Int
-    let version: Version
-    let sessionNumber: Int
+enum LogEntryType: String {
+    case log
+    case signpost
+}
+
+enum LogEntry {
+    struct Log {
+        let message: String
+        let metadata: Logger.Metadata?
+        let level: Logger.Level
+        let date: Date
+        let file: String
+        let function: String
+        let label: String
+        let line: Int
+        let sessionNumber: Int
+        let source: String
+        let version: Version
+    }
+
+    struct Signpost {
+        let message: SignpostMessage
+        let id: String
+        let group: String
+        let date: Date
+        let file: String
+        let function: String
+        let label: String
+        let line: Int
+        let sessionNumber: Int
+        let source: String
+        let version: Version
+    }
+
+    case log(Log)
+    case signpost(Signpost)
+
+    var level: Logger.Level {
+        switch self {
+        case .log(let log): return log.level
+        case .signpost: return .info
+        }
+    }
+
+    var date: Date {
+        switch self {
+        case .log(let log): return log.date
+        case .signpost(let signpost): return signpost.date
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .log(let log): return log.label
+        case .signpost(let signpost): return signpost.label
+        }
+    }
+
+    var source: String {
+        switch self {
+        case .log(let log): return log.source
+        case .signpost(let signpost): return signpost.source
+        }
+    }
+
+    var function: String {
+        switch self {
+        case .log(let log): return log.function
+        case .signpost(let signpost): return signpost.function
+        }
+    }
+
+    var file: String {
+        switch self {
+        case .log(let log): return log.file
+        case .signpost(let signpost): return signpost.file
+        }
+    }
+
+    var line: Int {
+        switch self {
+        case .log(let log): return log.line
+        case .signpost(let signpost): return signpost.line
+        }
+    }
+
+    var version: Version {
+        switch self {
+        case .log(let log): return log.version
+        case .signpost(let signpost): return signpost.version
+        }
+    }
+
+    var sessionNumber: Int {
+        switch self {
+        case .log(let log): return log.sessionNumber
+        case .signpost(let signpost): return signpost.sessionNumber
+        }
+    }
 }
 
 struct LogsQuery {
@@ -62,7 +150,15 @@ final class LogEntriesRepository: LogsViewerItemsProviderDataSource {
             guard let query else { return entries }
 
             if let levels = query.levels {
-                entries = entries.filter { levels.contains($0.level) }
+                entries = entries.filter { entry in
+                    switch entry {
+                    case .log(let log):
+                        return levels.contains(log.level)
+
+                    case .signpost:
+                        return levels.contains(.info)
+                    }
+                }
             }
             if let sessionNumbersRange = query.sessionNumbersRange {
                 entries = entries.filter { sessionNumbersRange ~= $0.sessionNumber }
@@ -91,22 +187,62 @@ final class LogEntriesRepository: LogsViewerItemsProviderDataSource {
 
     private func entriesFilteredByInput(entries: [LogEntry], input: String) -> [LogEntry] {
         entries.filter { entry in
-            let messageCondition = entry.message.contains(input)
             let functionCondition = entry.function.contains(input)
             let fileCondition = entry.file.contains(input)
 
-            var metadataCondition = true
-            metadataOuterClause:
-            if let metatadaValues = entry.metadata.map(Logger.MetadataValue.dictionary).map(metatadaStringValues) {
-                for metatadaValue in metatadaValues {
-                    guard metatadaValue.contains(input) else { continue }
+            let messageCondition: Bool
+            switch entry {
+            case .log(let log):
+                messageCondition = log.message.contains(input)
 
-                    break metadataOuterClause
+            case .signpost(let signpost):
+                messageCondition = signpost.message.rawValue.contains(input)
+            }
+
+            let signpostIDCondition: Bool
+            switch entry {
+            case .log:
+                signpostIDCondition = false
+
+            case .signpost(let signpost):
+                signpostIDCondition = signpost.id.contains(input)
+            }
+
+            let signpostGroupCondition: Bool
+            switch entry {
+            case .log:
+                signpostGroupCondition = false
+
+            case .signpost(let signpost):
+                signpostGroupCondition = signpost.group.contains(input)
+            }
+
+            let metadataCondition: Bool
+            switch entry {
+            case .log(let log):
+                ifClause:
+                if let metatadaValues = log.metadata.map(Logger.MetadataValue.dictionary).map(metatadaStringValues) {
+                    for metatadaValue in metatadaValues {
+                        if metatadaValue.contains(input) {
+                            metadataCondition = true
+                            break ifClause
+                        }
+                    }
+                    metadataCondition = false
+                } else {
+                    metadataCondition = false
                 }
+
+            case .signpost:
                 metadataCondition = false
             }
 
-            return messageCondition || functionCondition || fileCondition || metadataCondition
+            return  functionCondition ||
+                fileCondition ||
+                messageCondition ||
+                signpostIDCondition ||
+                signpostGroupCondition ||
+                metadataCondition
         }
     }
 
@@ -153,7 +289,6 @@ final class LogEntriesRepository: LogsViewerItemsProviderDataSource {
 
         while rawLogEntries.isNotEmpty {
             var rawEntry = String(rawLogEntries.removeFirst())
-
             if let logEntryDecryptor {
                 do {
                     rawEntry = try logEntryDecryptor.decrypt(rawEntry)
@@ -163,51 +298,66 @@ final class LogEntriesRepository: LogsViewerItemsProviderDataSource {
                 }
             }
 
-            guard !rawEntry.starts(with: "{") else {
-                if let metadata = try? metadataDecoder.decode(rawEntry) {
-                    headerMetadata = metadata
-                } else {
-                    return .failure(.invalidHeader(rawHeader: rawEntry))
-                }
-
-                continue
-            }
-
             let messageAndMetadata = rawEntry
                 .split(maxSplits: 2) { $0.isWhitespace && $1 == "{" }
                 .map(String.init)
-            let message = messageAndMetadata[safe: 0]?
-                .trimmingCharacters(in: .whitespaces)
+            let message = messageAndMetadata[safe: 0]?.trimmingCharacters(in: .whitespaces)
             let rawMetadata = messageAndMetadata[safe: 1]
 
-            guard let message, let rawMetadata, var metadata = try? metadataDecoder.decode(rawMetadata) else {
+            guard let message else {
                 return .failure(.invalidEntry(rawEntry: rawEntry))
             }
 
-            guard var headerMetadata else {
-                return .failure(.noHeaderForEntry(rawEntry: rawEntry))
+            guard let rawMetadata, var metadata = try? metadataDecoder.decode(rawMetadata) else {
+                return .failure(.invalidMetadata(description: rawEntry))
             }
 
-            do {
-                let date = try extraxtDate(from: &metadata, key: "timestamp")
-                let level = try extraxtLevel(from: &metadata, key: "level")
-                let label = try extraxtString(from: &metadata, key: "label")
-                let source = try extraxtString(from: &metadata, key: "source")
-                let function = try extraxtString(from: &metadata, key: "function")
-                let file = try extraxtString(from: &metadata, key: "file")
-                let line = try extraxtInt(from: &metadata, key: "line")
-                let version = try extraxtVersion(from: &headerMetadata, key: "version")
-                let sessionNumber = try extraxtInt(from: &headerMetadata, key: "sessionNumber")
+            switch message {
+            case "SESSION_HEADER":
+                headerMetadata = metadata
+                continue
 
-                logEntries.append(LogEntry(
-                    message: message, metadata: metadata, date: date, level: level,
-                    label: label, source: source, function: function, file: file, line: line,
-                    version: version, sessionNumber: sessionNumber
-                ))
-            } catch let error as LogEntriesRepositoryError {
-                return .failure(error)
-            } catch {
-                assertionFailure()
+            default:
+                guard var headerMetadata else {
+                    return .failure(.noHeaderForEntry(rawEntry: rawEntry))
+                }
+
+                do {
+                    let date = try extraxtDate(from: &metadata, key: "timestamp")
+                    let file = try extraxtString(from: &metadata, key: "file")
+                    let function = try extraxtString(from: &metadata, key: "function")
+                    let label = try extraxtString(from: &metadata, key: "label")
+                    let line = try extraxtInt(from: &metadata, key: "line")
+                    let sessionNumber = try extraxtInt(from: &headerMetadata, key: "sessionNumber")
+                    let source = try extraxtString(from: &metadata, key: "source")
+                    let version = try extraxtVersion(from: &headerMetadata, key: "version")
+
+                    let logEntry: LogEntry
+                    if let signpostMessage = SignpostMessage(rawValue: message) {
+                        let id = try extraxtString(from: &metadata, key: "signpostID")
+                        let group = try extraxtString(from: &metadata, key: "signpostGroup")
+
+                        logEntry = .signpost(LogEntry.Signpost(
+                            message: signpostMessage, id: id, group: group,
+                            date: date, file: file, function: function, label: label, line: line,
+                            sessionNumber: sessionNumber, source: source, version: version
+                        ))
+                    } else {
+                        let level = try extraxtLevel(from: &metadata, key: "level")
+
+                        logEntry = .log(LogEntry.Log(
+                            message: message, metadata: metadata, level: level,
+                            date: date, file: file, function: function, label: label, line: line,
+                            sessionNumber: sessionNumber, source: source, version: version
+                        ))
+                    }
+
+                    logEntries.append(logEntry)
+                } catch let error as LogEntriesRepositoryError {
+                    return .failure(error)
+                } catch {
+                    assertionFailure()
+                }
             }
         }
 
