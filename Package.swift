@@ -14,6 +14,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
+        .package(url: "https://github.com/kutchie-pelaez-packages/AlertBuilder.git", branch: "master"),
         .package(url: "https://github.com/kutchie-pelaez-packages/Builder.git", branch: "master"),
         .package(url: "https://github.com/kutchie-pelaez-packages/Core.git", branch: "master"),
         .package(url: "https://github.com/kutchie-pelaez-packages/SessionManager.git", branch: "master"),
@@ -25,6 +26,7 @@ let package = Package(
             .product(name: "Logging", package: "swift-log")
         ]),
         .target(name: "LogsViewer", dependencies: [
+            .product(name: "AlertBuilder", package: "AlertBuilder"),
             .product(name: "Builder", package: "Builder"),
             .product(name: "Core", package: "Core"),
             .product(name: "CoreUI", package: "Core"),

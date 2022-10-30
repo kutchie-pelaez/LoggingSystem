@@ -43,24 +43,16 @@ final class LogEntriesRepository {
     }()
 
     private let logs: Data
-    private let logEntryDecryptor: LogEntryDecryptor?
+    private let logFilesURLProvider: LogFilesURLProvider
+    private var logEntryDecryptor: LogEntryDecryptor?
 
-    private lazy var entriesResult: Result<[LogEntry], LogEntriesRepositoryError> = {
-        do {
-            let entries = try parseLogs()
+    private lazy var entriesResult = recreateEntries()
+    private var decryptedLogs: Data?
 
-            return .success(entries)
-        } catch let error as LogEntriesRepositoryError {
-            return .failure(error)
-        } catch {
-            assertionFailure()
-            return .failure(.noEntries)
-        }
-    }()
-
-    init(logs: Data, logEntryDecryptor: LogEntryDecryptor?) {
+    init(logs: Data, logFilesURLProvider: LogFilesURLProvider, decryptionKey: String?) {
         self.logs = logs
-        self.logEntryDecryptor = logEntryDecryptor
+        self.logFilesURLProvider = logFilesURLProvider
+        self.logEntryDecryptor = decryptionKey.map(LogEntryDecryptor.init)
     }
 
     func entries(for query: LogsQuery?) throws -> [LogEntry] {
@@ -88,13 +80,28 @@ final class LogEntriesRepository {
         }
     }
 
-    private func parseLogs() throws -> [LogEntry] {
+    func setDecryptionKey(_ decryptionKey: String) {
+        logEntryDecryptor = LogEntryDecryptor(decryptionKey: decryptionKey)
+        entriesResult = recreateEntries()
+    }
+
+    private func recreateEntries() -> Result<[LogEntry], LogEntriesRepositoryError> {
+        let entriesResult = parseLogs()
+        if case .success = entriesResult {
+            createTemporaryFiles()
+        }
+
+        return entriesResult
+    }
+
+    private func parseLogs() -> Result<[LogEntry], LogEntriesRepositoryError> {
         guard let rawLogs = String(data: logs, encoding: .utf8), rawLogs.isNotEmpty else {
-            throw LogEntriesRepositoryError.noEntries
+            return .failure(.noEntries)
         }
 
         let metadataDecoder = LogEntryMetadataDecoder()
         var rawLogEntries = rawLogs.split(separator: "\n")
+        var rawDecryptedEntries = logEntryDecryptor.map { _ in [String]() }
         var headerMetadata: Logger.Metadata?
         var logEntries = [LogEntry]()
         logEntries.reserveCapacity(rawLogEntries.count)
@@ -105,8 +112,9 @@ final class LogEntriesRepository {
             if let logEntryDecryptor {
                 do {
                     rawEntry = try logEntryDecryptor.decrypt(rawEntry)
+                    rawDecryptedEntries?.append(rawEntry)
                 } catch {
-                    throw LogEntriesRepositoryError.invalidDecryptionKey(description: error.localizedDescription)
+                    return .failure(.invalidDecryptionKey(description: error.localizedDescription))
                 }
             }
 
@@ -114,7 +122,7 @@ final class LogEntriesRepository {
                 if let metadata = try? metadataDecoder.decode(rawEntry) {
                     headerMetadata = metadata
                 } else {
-                    throw LogEntriesRepositoryError.invalidHeader(rawHeader: rawEntry)
+                    return .failure(.invalidHeader(rawHeader: rawEntry))
                 }
 
                 continue
@@ -128,31 +136,67 @@ final class LogEntriesRepository {
             let rawMetadata = messageAndMetadata[safe: 1]
 
             guard let message, let rawMetadata, var metadata = try? metadataDecoder.decode(rawMetadata) else {
-                throw LogEntriesRepositoryError.invalidEntry(rawEntry: rawEntry)
+                return .failure(.invalidEntry(rawEntry: rawEntry))
             }
 
             guard var headerMetadata else {
-                throw LogEntriesRepositoryError.noHeaderForEntry(rawEntry: rawEntry)
+                return .failure(.noHeaderForEntry(rawEntry: rawEntry))
             }
 
-            let date = try extraxtDate(from: &metadata, key: "timestamp")
-            let level = try extraxtLevel(from: &metadata, key: "level")
-            let label = try extraxtString(from: &metadata, key: "label")
-            let source = try extraxtString(from: &metadata, key: "source")
-            let function = try extraxtString(from: &metadata, key: "function")
-            let file = try extraxtString(from: &metadata, key: "file")
-            let line = try extraxtInt(from: &metadata, key: "line")
-            let version = try extraxtVersion(from: &headerMetadata, key: "version")
-            let sessionNumber = try extraxtInt(from: &headerMetadata, key: "sessionNumber")
+            do {
+                let date = try extraxtDate(from: &metadata, key: "timestamp")
+                let level = try extraxtLevel(from: &metadata, key: "level")
+                let label = try extraxtString(from: &metadata, key: "label")
+                let source = try extraxtString(from: &metadata, key: "source")
+                let function = try extraxtString(from: &metadata, key: "function")
+                let file = try extraxtString(from: &metadata, key: "file")
+                let line = try extraxtInt(from: &metadata, key: "line")
+                let version = try extraxtVersion(from: &headerMetadata, key: "version")
+                let sessionNumber = try extraxtInt(from: &headerMetadata, key: "sessionNumber")
 
-            logEntries.append(LogEntry(
-                message: message, metadata: metadata, date: date, level: level,
-                label: label, source: source, function: function, file: file, line: line,
-                version: version, sessionNumber: sessionNumber
-            ))
+                logEntries.append(LogEntry(
+                    message: message, metadata: metadata, date: date, level: level,
+                    label: label, source: source, function: function, file: file, line: line,
+                    version: version, sessionNumber: sessionNumber
+                ))
+            } catch let error as LogEntriesRepositoryError {
+                return .failure(error)
+            } catch {
+                assertionFailure()
+            }
         }
 
-        return logEntries
+        if let rawDecryptedEntries {
+            decryptedLogs = rawDecryptedEntries
+                .joined(separator: "\n")
+                .data(using: .utf8)
+        }
+
+        return .success(logEntries)
+    }
+
+    private func createTemporaryFiles() {
+        let fileManager = FileManager.default
+        let decryptedLogs = decryptedLogs ?? logs
+        let encryptedLogs = logEntryDecryptor.map { _ in logs }
+
+        do {
+            try fileManager.createDirectory(at: logFilesURLProvider.decryptedFileURL.deletingLastPathComponent())
+            try fileManager.createFile(
+                at: logFilesURLProvider.decryptedFileURL,
+                contents: decryptedLogs, overwrite: true
+            )
+
+            if let encryptedLogs {
+                try fileManager.createDirectory(at: logFilesURLProvider.encryptedFileURL.deletingLastPathComponent())
+                try fileManager.createFile(
+                    at: logFilesURLProvider.encryptedFileURL,
+                    contents: encryptedLogs, overwrite: true
+                )
+            }
+        } catch {
+            assertionFailure(error.localizedDescription)
+        }
     }
 
     private func extraxtString(from metadata: inout Logger.Metadata, key: String) throws -> String {
