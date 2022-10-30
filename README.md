@@ -1,1 +1,1 @@
-# LoggingManager
+# LoggingSystem

@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "LoggingManager",
+    name: "LoggingSystem",
     platforms: [.iOS(.v16)],
     products: [
         .library(name: "LogsViewer", targets: ["LogsViewer"]),
