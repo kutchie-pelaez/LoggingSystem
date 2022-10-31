@@ -23,7 +23,7 @@ public enum LoggingManagerFactory {
     ) -> some LoggingManager {
         let provider = DefaultLoggingManagerProvider()
 
-        return LoggingManagerImpl(
+        return produce(
             environment: environment,
             sessionManager: sessionManager,
             provider: provider

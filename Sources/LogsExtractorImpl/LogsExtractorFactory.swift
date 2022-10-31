@@ -10,6 +10,6 @@ public enum LogsExtractorFactory {
     public static func produce() -> some LogsExtractor {
         let provider = DefaultLogsExtractorProvider()
 
-        return LogsExtractorImpl(provider: provider)
+        return produce(provider: provider)
     }
 }
