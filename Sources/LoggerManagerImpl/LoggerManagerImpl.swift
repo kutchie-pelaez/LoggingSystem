@@ -69,7 +69,7 @@ final class LoggerManagerImpl<
                 type: type,
                 fileHandle: fileHandle,
                 logEntryEncryptor: provider.encryptionKey.map(LogEntryEncryptor.init),
-                sessionNumber: sessionManager.subject.value,
+                sessionNumber: sessionManager.sessionNumber,
                 shouldWriteHeader: { [weak self] in self?.isHeaderWritten == false }
             )
             fileLogHandler.delegate = self

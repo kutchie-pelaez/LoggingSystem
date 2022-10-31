@@ -3,7 +3,6 @@ import CoreUtils
 import Encryption
 import Foundation
 import Logging
-import SignpostLogger
 import Tagging
 import Version
 

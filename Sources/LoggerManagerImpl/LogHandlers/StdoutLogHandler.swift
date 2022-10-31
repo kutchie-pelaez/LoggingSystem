@@ -1,7 +1,6 @@
 import Core
 import Foundation
 import Logging
-import SignpostLogger
 import Tagging
 
 struct StdoutLogHandler: LogHandler {
