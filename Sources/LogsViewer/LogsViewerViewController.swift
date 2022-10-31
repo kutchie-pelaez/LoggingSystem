@@ -6,7 +6,11 @@ private enum ErrorCTA {
     case askForDecryptionKey
 }
 
-final class LogsViewerViewController<AB: AlertBuilder>: ViewController {
+final class LogsViewerViewController<AB: AlertBuilder>:
+    ViewController,
+    UIPopoverPresentationControllerDelegate,
+    UICalendarSelectionSingleDateDelegate
+{
     private let name: String
     private let repository: LogEntriesRepository
     private let itemsProvider: LogsViewerItemsProvider
@@ -64,7 +68,17 @@ final class LogsViewerViewController<AB: AlertBuilder>: ViewController {
                 self.present(activityViewController, animated: true)
             })
         }
-        navigationItem.leftBarButtonItem = itemsProvider.makeLeftNavigationItem()
+        navigationItem.leftBarButtonItem = itemsProvider.makeLeftNavigationItem(
+            setDatesClosure: { [weak self] in
+                self?.showCalendarView()
+            },
+            setVersionsClosure: {
+
+            },
+            setSessionNumbersClosure: {
+
+            }
+        )
         navigationItem.rightBarButtonItem = itemsProvider.makeRightNavigationItem { [weak self] in
             self?.dismiss(animated: true)
         }
@@ -131,6 +145,21 @@ final class LogsViewerViewController<AB: AlertBuilder>: ViewController {
         }
     }
 
+    private func showCalendarView() {
+        let calendarView = UICalendarView()
+        calendarView.fontDesign = .rounded
+        calendarView.selectionBehavior = UICalendarSelectionSingleDate(delegate: self)
+
+        let calendarViewController = CalendarViewController(calendarView: calendarView)
+        calendarViewController.preferredContentSize = CGSize(width: 375, height: 375)
+        calendarViewController.modalPresentationStyle = .popover
+        calendarViewController.popoverPresentationController?.delegate = self
+        calendarViewController.popoverPresentationController?.sourceView = navigationController?.navigationBar
+        calendarViewController.popoverPresentationController?.permittedArrowDirections = .up
+
+        present(calendarViewController, animated: true)
+    }
+
     private func askForDecryptionKey() {
         let alertController = alertBuilder.build(using: Alert(
             message: "Enter decryption key",
@@ -140,5 +169,28 @@ final class LogsViewerViewController<AB: AlertBuilder>: ViewController {
             }]
         ))
         present(alertController, animated: true)
+    }
+
+    // MARK: UIAdaptivePresentationControllerDelegate
+
+    func adaptivePresentationStyle(for controller: UIPresentationController) -> UIModalPresentationStyle { .none }
+
+    // MARK: UICalendarSelectionSingleDateDelegate
+
+    func dateSelection(_ selection: UICalendarSelectionSingleDate, didSelectDate dateComponents: DateComponents?) {
+        print(dateComponents)
+    }
+}
+
+private final class CalendarViewController: ViewController {
+    private let calendarView: UICalendarView
+
+    init(calendarView: UICalendarView) {
+        self.calendarView = calendarView
+        super.init()
+    }
+
+    override func loadView() {
+        view = calendarView
     }
 }

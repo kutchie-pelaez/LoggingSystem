@@ -7,8 +7,6 @@ struct StdoutLogHandler: LogHandler {
     private let label: String
     private let loggerType: LoggerType
 
-    private let dateFormatter = LogDateFormatter()
-
     init(label: String, loggerType: LoggerType) {
         self.label = label
         self.loggerType = loggerType
@@ -76,7 +74,7 @@ struct StdoutLogHandler: LogHandler {
         switch loggerType {
         case .regular:
             entryMessage = [
-                dateFormatter.currentTimestamp(),
+                LogDateFormatter.currentTimestamp(),
                 label.surroundedBy("[", "]"),
                 hint(file: file, function: function, line: line),
                 "-",
@@ -101,7 +99,7 @@ struct StdoutLogHandler: LogHandler {
 
             entryMessage = [
                 signpostIndicator(for: signpostMessage),
-                dateFormatter.currentTimestamp(),
+                LogDateFormatter.currentTimestamp(),
                 label.surroundedBy("[", "]"),
                 hint(file: file, function: function, line: line),
                 signpostIndicator(for: signpostMessage)

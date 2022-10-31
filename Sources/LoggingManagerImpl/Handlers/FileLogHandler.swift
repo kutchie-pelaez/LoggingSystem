@@ -7,7 +7,6 @@ import SignpostLogger
 import Version
 
 private let loggingQueue = DispatchQueue(label: "com.kutchie-pelaez.Logging")
-private let dateFormatter = LogDateFormatter()
 private let logEntryMetadataEncoder = LogEntryMetadataEncoder()
 
 protocol FileLogHandlerDelegate: AnyObject {
@@ -62,7 +61,7 @@ struct FileLogHandler: LogHandler {
         message: Logger.Message, logMetadata: Logger.Metadata?, level: Logger.Level,
         source: String, file: String, function: String, line: UInt
     ) -> Logger.Metadata {
-        let timestamp = dateFormatter.currentTimestamp()
+        let timestamp = LogDateFormatter.currentTimestamp()
         let fileLastComponent = safeUndefinedIfNil(file.split(separator: "/").last, "n/a")
 
         var coreMetadata: Logger.Metadata = [

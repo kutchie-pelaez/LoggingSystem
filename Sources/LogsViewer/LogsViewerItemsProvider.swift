@@ -75,7 +75,11 @@ final class LogsViewerItemsProvider {
         ])
     }
 
-    func makeLeftNavigationItem() -> UIBarButtonItem {
+    func makeLeftNavigationItem(
+        setDatesClosure: @escaping Closure,
+        setVersionsClosure: @escaping Closure,
+        setSessionNumbersClosure: @escaping Closure
+    ) -> UIBarButtonItem {
         UIBarButtonItem(image: SFSymbols.ellipsisCircle.image, menu: UIMenu(children: [
             UIMenu(title: "Sorting", options: .displayInline, children: [
                 makeEntriesSortItem(),
@@ -88,14 +92,14 @@ final class LogsViewerItemsProvider {
                 makeSourceFilterItem()
             ].unwrapped()),
             UIMenu(options: .displayInline, children: [
-                UIAction(title: "Date", image: SFSymbols.calendar.image, handler: { _ in
-
+                UIAction(title: "Filter by date", image: SFSymbols.calendar.image, handler: { _ in
+                    setDatesClosure()
                 }),
-                UIAction(title: "Version", image: SFSymbols.hammerFill.image, handler: { _ in
-
+                UIAction(title: "Filter by version", image: SFSymbols.hammerFill.image, handler: { _ in
+                    setVersionsClosure()
                 }),
-                UIAction(title: "Session", image: SFSymbols.personBadgeClockFill.image, handler: { _ in
-
+                UIAction(title: "Filter by session", image: SFSymbols.personBadgeClockFill.image, handler: { _ in
+                    setSessionNumbersClosure()
                 })
             ])
         ]))
@@ -125,7 +129,7 @@ final class LogsViewerItemsProvider {
 
     private func makeEntriesSortItem() -> UIMenuElement {
         makeSortItem(
-            title: "Entries sorting",
+            title: "Sort entries by",
             optionsType: LogEntrySortOption.self,
             selectedOption: .dateAscending
         )
@@ -133,7 +137,7 @@ final class LogsViewerItemsProvider {
 
     private func makeGroupsSortItem() -> UIMenuElement {
         makeSortItem(
-            title: "Groups sorting",
+            title: "Sort groups by",
             optionsType: LogEntriesGroupSortOption.self,
             selectedOption: .entriesCountAscending
         )

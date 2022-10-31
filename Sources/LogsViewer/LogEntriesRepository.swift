@@ -150,7 +150,7 @@ enum LogEntriesRepositoryError: Error {
 final class LogEntriesRepository: LogsViewerItemsProviderDataSource {
     private static let dateFormatter: DateFormatter = {
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "dd-MM-yyyy HH:mm:ssZ"
+        dateFormatter.dateFormat = "dd-MM-yyyy HH:mm:ss.SSSZ"
 
         return dateFormatter
     }()
@@ -400,7 +400,9 @@ final class LogEntriesRepository: LogsViewerItemsProviderDataSource {
         let encryptedLogs = logEntryDecryptor.map { _ in logs }
 
         do {
-            try fileManager.removeItem(at: logFilesURLProvider.logsDirectoryURL)
+            if fileManager.directoryExists(at: logFilesURLProvider.logsDirectoryURL) {
+                try fileManager.removeItem(at: logFilesURLProvider.logsDirectoryURL)
+            }
 
             try fileManager.createDirectory(at: logFilesURLProvider.decryptedDirectoryURL)
             try fileManager.createFile(
