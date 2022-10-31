@@ -8,6 +8,7 @@ public enum MetadataKeys: String {
     case signpostGroup
     case signpostID
     case source
+    case thread
     case timestamp
     case version
 }

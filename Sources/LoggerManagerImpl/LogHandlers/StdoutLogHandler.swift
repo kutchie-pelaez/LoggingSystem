@@ -1,5 +1,5 @@
 import Core
-import Darwin
+import Foundation
 import Logging
 import SignpostLogger
 import Tagging
@@ -72,23 +72,26 @@ struct StdoutLogHandler: LogHandler {
         let entryMessage: String
         let entryMetadata = self.metadata.appending(metadata)
 
+        let timestampPart = LogDateFormatter.currentTimestamp()
+        let labelPart = type.label.surroundedBy("[", "]")
+        let hintPart = hint(file: file, function: function, line: line)
+        let threadPart: String? = {
+            guard !Thread.isMainThread else { return nil }
+            let threadName = Thread.current.name ?? "\(Thread.current)"
+            return ("🧵" + threadName).surroundedBy("[", "]")
+        }()
+
         switch type {
-        case .default(let label):
+        case .default:
             entryMessage = [
-                LogDateFormatter.currentTimestamp(),
-                label.surroundedBy("[", "]"),
-                hint(file: file, function: function, line: line),
-                "-",
-                indicator(for: level),
-                message.description
+                timestampPart, labelPart, threadPart, hintPart,
+                "-", indicator(for: level), message.description
             ].unwrapped().joined(separator: " ")
 
-        case .signpost(let label, _):
+        case .signpost:
             entryMessage = [
                 indicator(for: entryTag),
-                LogDateFormatter.currentTimestamp(),
-                label.surroundedBy("[", "]"),
-                hint(file: file, function: function, line: line),
+                timestampPart, labelPart, threadPart, threadPart, hintPart,
                 indicator(for: entryTag)
             ].unwrapped().joined(separator: " ")
         }

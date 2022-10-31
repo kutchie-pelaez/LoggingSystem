@@ -100,6 +100,11 @@ struct FileLogHandler: LogHandler {
             MetadataKeys.timestamp.rawValue: "\(timestamp)"
         ]
 
+        if !Thread.isMainThread {
+            let threadName = Thread.current.name ?? "\(Thread.current)"
+            coreMetadata[MetadataKeys.thread.rawValue] = "\(threadName)"
+        }
+
         switch type {
         case .default:
             coreMetadata[MetadataKeys.level.rawValue] = "\(level)"

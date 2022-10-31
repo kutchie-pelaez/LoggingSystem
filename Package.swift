@@ -37,7 +37,6 @@ let package = Package(
             .product(name: "Version", package: "Version"),
             .target(name: "Encryption"),
             .target(name: "LoggerManager"),
-            .target(name: "SignpostLogger"),
             .target(name: "Tagging")
         ]),
         .target(name: "LogsExtractor"),
@@ -54,8 +53,7 @@ let package = Package(
             .product(name: "CoreUI", package: "Core"),
             .product(name: "Logging", package: "swift-log"),
             .product(name: "Version", package: "Version"),
-            .target(name: "Encryption"),
-            .target(name: "SignpostLogger")
+            .target(name: "Encryption")
         ]),
         .target(name: "SignpostLogger", dependencies: [
             .product(name: "Logging", package: "swift-log"),
