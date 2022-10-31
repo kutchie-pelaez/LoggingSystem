@@ -1,6 +1,6 @@
 import Core
+import Encryption
 import Foundation
-import LogEntryEncryption
 import Logging
 import SignpostLogger
 import Version

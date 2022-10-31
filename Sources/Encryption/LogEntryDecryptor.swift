@@ -6,7 +6,7 @@ public struct LogEntryDecryptor {
     }
 
     // TODO: - Implement decryption
-    
+
     public func decrypt(_ log: String) throws -> String {
         log
     }

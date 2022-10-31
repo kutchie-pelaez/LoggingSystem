@@ -2,14 +2,24 @@ import Core
 import Darwin
 import Logging
 import SignpostLogger
+import Tagging
 
 struct StdoutLogHandler: LogHandler {
-    private let label: String
-    private let loggerType: LoggerType
+    private let type: LoggerType
 
-    init(label: String, loggerType: LoggerType) {
-        self.label = label
-        self.loggerType = loggerType
+    init(type: LoggerType) {
+        self.type = type
+    }
+
+    private func write(entry: StdoutLogEntry) {
+        var rawEntry = entry.description
+        rawEntry.makeContiguousUTF8()
+        rawEntry.utf8.withContiguousStorageIfAvailable { utf8Bytes in
+            flockfile(stdout)
+            defer { funlockfile(stdout) }
+            fwrite(utf8Bytes.baseAddress!, 1, utf8Bytes.count, stdout)
+            fflush(stdout)
+        }
     }
 
     private func indicator(for level: Logger.Level) -> String? {
@@ -22,10 +32,11 @@ struct StdoutLogHandler: LogHandler {
         }
     }
 
-    private func signpostIndicator(for signpostMessage: SignpostMessage) -> String {
-        switch signpostMessage {
-        case .begin: return "🚩"
-        case .end: return "🏁"
+    private func indicator(for tag: LogEntryTag?) -> String? {
+        switch tag {
+        case .signpostBegin: return "🚩"
+        case .signpostEnd: return "🏁"
+        default: return nil
         }
     }
 
@@ -40,17 +51,6 @@ struct StdoutLogHandler: LogHandler {
         return [fileStem, function, line.description]
             .unwrapped()
             .joined(separator: "::")
-    }
-
-    private func write(entry: StdoutLogEntry) {
-        var output = entry.description
-        output.makeContiguousUTF8()
-        output.utf8.withContiguousStorageIfAvailable { utf8Bytes in
-            flockfile(stdout)
-            defer { funlockfile(stdout) }
-            _ = fwrite(utf8Bytes.baseAddress!, 1, utf8Bytes.count, stdout)
-            _ = fflush(stdout)
-        }
     }
 
     // MARK: LogHandler
@@ -68,11 +68,12 @@ struct StdoutLogHandler: LogHandler {
         level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?,
         source _: String, file: String, function: String, line: UInt
     ) {
+        let entryTag = RawLogEntry(message.description).tag
         let entryMessage: String
-        var metadata = self.metadata.appending(metadata)
+        let entryMetadata = self.metadata.appending(metadata)
 
-        switch loggerType {
-        case .regular:
+        switch type {
+        case .default(let label):
             entryMessage = [
                 LogDateFormatter.currentTimestamp(),
                 label.surroundedBy("[", "]"),
@@ -82,33 +83,20 @@ struct StdoutLogHandler: LogHandler {
                 message.description
             ].unwrapped().joined(separator: " ")
 
-        case .signpost:
-            guard let signpostMessage = SignpostMessage(rawValue: message.description) else {
-                assertionFailure()
-                return
-            }
-
-            let signpostSplits = label.split(separator: "::")
-            let group = signpostSplits[safe: 1]
-            let label = signpostSplits[safe: 2]
-
-            guard let group, let label else {
-                assertionFailure()
-                return
-            }
-
+        case .signpost(let label, _):
             entryMessage = [
-                signpostIndicator(for: signpostMessage),
+                indicator(for: entryTag),
                 LogDateFormatter.currentTimestamp(),
                 label.surroundedBy("[", "]"),
                 hint(file: file, function: function, line: line),
-                signpostIndicator(for: signpostMessage)
-            ].joined(separator: " ")
-            metadata["signpostGroup"] = "\(group)"
+                indicator(for: entryTag)
+            ].unwrapped().joined(separator: " ")
         }
 
-        let logEntry = StdoutLogEntry(message: entryMessage, metadata: metadata)
-        write(entry: logEntry)
+        write(entry: StdoutLogEntry(
+            message: entryMessage,
+            metadata: entryMetadata
+        ))
     }
 }
 

@@ -1,11 +1,11 @@
 import Foundation
 
-public protocol LoggingManagerProvider {
+public protocol LoggerManagerProvider {
     var encryptionKey: String? { get }
     func logsFileURL(for logsFileName: String) -> URL
 }
 
-extension LoggingManagerProvider {
+extension LoggerManagerProvider {
     public var encryptionKey: String? { nil }
 
     public func logsFileURL(for logsFileName: String) -> URL {
@@ -16,4 +16,4 @@ extension LoggingManagerProvider {
     }
 }
 
-struct DefaultLoggingManagerProvider: LoggingManagerProvider { }
+struct DefaultLoggerManagerProvider: LoggerManagerProvider { }

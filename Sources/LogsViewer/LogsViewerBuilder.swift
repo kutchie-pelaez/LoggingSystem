@@ -1,6 +1,6 @@
 import AlertBuilder
 import Builder
-import LogEntryEncryption
+import Encryption
 import UIKit
 
 public protocol LogViewerDependencies {

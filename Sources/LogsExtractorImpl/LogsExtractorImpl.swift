@@ -1,7 +1,7 @@
 import Core
 import CoreUtils
+import Encryption
 import Foundation
-import LogEntryEncryption
 import LogsExtractor
 
 let logsExtractorQueue = DispatchQueue(label: "com.kutchie-pelaez.LogsExtractor")

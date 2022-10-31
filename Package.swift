@@ -6,12 +6,12 @@ let package = Package(
     name: "LoggingSystem",
     platforms: [.iOS(.v16)],
     products: [
-        .library(name: "SignpostLogger", targets: ["SignpostLogger"]),
-        .library(name: "LogsViewer", targets: ["LogsViewer"]),
+        .library(name: "LoggerManager", targets: ["LoggerManager"]),
+        .library(name: "LoggerManagerImpl", targets: ["LoggerManagerImpl"]),
         .library(name: "LogsExtractor", targets: ["LogsExtractor"]),
         .library(name: "LogsExtractorImpl", targets: ["LogsExtractorImpl"]),
-        .library(name: "LoggingManager", targets: ["LoggingManager"]),
-        .library(name: "LoggingManagerImpl", targets: ["LoggingManagerImpl"])
+        .library(name: "LogsViewer", targets: ["LogsViewer"]),
+        .library(name: "SignpostLogger", targets: ["SignpostLogger"])
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
@@ -22,12 +22,30 @@ let package = Package(
         .package(url: "https://github.com/kutchie-pelaez-packages/Version.git", branch: "master")
     ],
     targets: [
-        .target(name: "SignpostLogger", dependencies: [
-            .product(name: "Logging", package: "swift-log")
-        ]),
-        .target(name: "LogEntryEncryption", dependencies: [
+        .target(name: "Encryption", dependencies: [
             .product(name: "CoreUtils", package: "Core"),
             .product(name: "Logging", package: "swift-log")
+        ]),
+        .target(name: "LoggerManager", dependencies: [
+            .product(name: "CoreUtils", package: "Core")
+        ]),
+        .target(name: "LoggerManagerImpl", dependencies: [
+            .product(name: "Core", package: "Core"),
+            .product(name: "CoreUtils", package: "Core"),
+            .product(name: "Logging", package: "swift-log"),
+            .product(name: "SessionManager", package: "SessionManager"),
+            .product(name: "Version", package: "Version"),
+            .target(name: "Encryption"),
+            .target(name: "LoggerManager"),
+            .target(name: "SignpostLogger"),
+            .target(name: "Tagging")
+        ]),
+        .target(name: "LogsExtractor"),
+        .target(name: "LogsExtractorImpl", dependencies: [
+            .product(name: "Core", package: "Core"),
+            .product(name: "CoreUtils", package: "Core"),
+            .target(name: "Encryption"),
+            .target(name: "LogsExtractor")
         ]),
         .target(name: "LogsViewer", dependencies: [
             .product(name: "AlertBuilder", package: "AlertBuilder"),
@@ -36,28 +54,15 @@ let package = Package(
             .product(name: "CoreUI", package: "Core"),
             .product(name: "Logging", package: "swift-log"),
             .product(name: "Version", package: "Version"),
-            .target(name: "LogEntryEncryption"),
+            .target(name: "Encryption"),
             .target(name: "SignpostLogger")
         ]),
-        .target(name: "LogsExtractor"),
-        .target(name: "LogsExtractorImpl", dependencies: [
-            .product(name: "Core", package: "Core"),
-            .product(name: "CoreUtils", package: "Core"),
-            .target(name: "LogEntryEncryption"),
-            .target(name: "LogsExtractor")
-        ]),
-        .target(name: "LoggingManager", dependencies: [
-            .product(name: "CoreUtils", package: "Core")
-        ]),
-        .target(name: "LoggingManagerImpl", dependencies: [
-            .product(name: "Core", package: "Core"),
-            .product(name: "CoreUtils", package: "Core"),
+        .target(name: "SignpostLogger", dependencies: [
             .product(name: "Logging", package: "swift-log"),
-            .product(name: "SessionManager", package: "SessionManager"),
-            .product(name: "Version", package: "Version"),
-            .target(name: "LogEntryEncryption"),
-            .target(name: "LoggingManager"),
-            .target(name: "SignpostLogger")
+            .target(name: "Tagging")
+        ]),
+        .target(name: "Tagging", dependencies: [
+            .product(name: "Core", package: "Core")
         ])
     ]
 )
