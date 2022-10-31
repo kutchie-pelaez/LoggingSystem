@@ -78,8 +78,8 @@ struct FileLogHandler: LogHandler {
         let version = safeUndefinedIfNil(versionString.flatMap { try? Version($0) }?.description, "n/a")
 
         return [
-            "sessionNumber": "\(sessionNumber)",
-            "version": "\(version)"
+            MetadataKeys.sessionNumber.rawValue: "\(sessionNumber)",
+            MetadataKeys.version.rawValue: "\(version)"
         ]
     }
 
@@ -92,17 +92,17 @@ struct FileLogHandler: LogHandler {
         let fileLastComponent = safeUndefinedIfNil(file.split(separator: "/").last, "n/a")
 
         var coreMetadata: Logger.Metadata = [
-            "file": "\(fileLastComponent)",
-            "function": "\(function)",
-            "label": "\(type.label)",
-            "line": "\(line)",
-            "source": "\(source)",
-            "timestamp": "\(timestamp)"
+            MetadataKeys.file.rawValue: "\(fileLastComponent)",
+            MetadataKeys.function.rawValue: "\(function)",
+            MetadataKeys.label.rawValue: "\(type.label)",
+            MetadataKeys.line.rawValue: "\(line)",
+            MetadataKeys.source.rawValue: "\(source)",
+            MetadataKeys.timestamp.rawValue: "\(timestamp)"
         ]
 
         switch type {
         case .default:
-            coreMetadata["level"] = "\(level)"
+            coreMetadata[MetadataKeys.level.rawValue] = "\(level)"
 
         case .signpost:
             break
