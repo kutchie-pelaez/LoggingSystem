@@ -4,7 +4,7 @@ import LogEntryEncryption
 import LoggingManager
 import SessionManager
 
-public enum LoggerFactory {
+public enum LoggingManagerFactory {
     public static func produce(
         environment: Environment,
         sessionManager: some SessionManager,
