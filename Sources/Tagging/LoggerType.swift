@@ -18,7 +18,7 @@ public enum LoggerType: CustomStringConvertible {
     }
 
     public init(from label: String) {
-        let signpostSplits = label.split(separator: separator)
+        let signpostSplits = label.split(separator: separator, maxSplits: 3)
         if
             signpostSplits.count > 2 &&
             signpostSplits[safe: 0].map(String.init) == signpostLabelTag,

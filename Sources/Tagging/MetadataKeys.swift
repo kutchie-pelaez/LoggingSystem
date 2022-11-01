@@ -1,3 +1,5 @@
+import Core
+
 public enum MetadataKeys: String {
     case file
     case function
@@ -11,4 +13,13 @@ public enum MetadataKeys: String {
     case thread
     case timestamp
     case version
+
+    // MARK: RawRepresentable
+
+    public var rawValue: String {
+        String(describing: self)
+            .camelCaseSplitted()
+            .map { $0.uppercased() }
+            .joined(separator: "_")
+    }
 }

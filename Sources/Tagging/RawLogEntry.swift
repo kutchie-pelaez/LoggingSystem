@@ -23,15 +23,15 @@ public struct RawLogEntry: CustomStringConvertible {
             guard let rawValue = rawValue.map(String.init) else { return }
 
             if let validTag = LogEntryTag(rawValue: rawValue) {
-                tag = validTag
+                tag = safeUndefinedIf(tag != nil, validTag)
             } else if rawValue.hasPrefix("{") && rawValue.hasSuffix("}") {
-                metadata = rawValue
+                metadata = safeUndefinedIf(metadata != nil, rawValue)
             } else {
-                message = rawValue
+                message = safeUndefinedIf(message != nil, rawValue)
             }
         }
 
-        let rawParts = rawValue.split(separator: separator)
+        let rawParts = rawValue.split(separator: separator, maxSplits: 3)
         proceed(rawParts[safe: 0])
         proceed(rawParts[safe: 1])
         proceed(rawParts[safe: 2])
@@ -39,7 +39,6 @@ public struct RawLogEntry: CustomStringConvertible {
         self.tag = tag
         self.message = message
         self.metadata = metadata
-
         validateSelf()
     }
 
