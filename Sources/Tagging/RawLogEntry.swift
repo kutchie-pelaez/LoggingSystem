@@ -1,7 +1,7 @@
 import Core
 import Undefined
 
-private let separator = ":::"
+private let separator = "::"
 
 public struct RawLogEntry: CustomStringConvertible {
     public let tag: LogEntryTag?

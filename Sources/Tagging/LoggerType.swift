@@ -1,7 +1,7 @@
 import Core
 
 private let signpostLabelTag = "SIGNPOST"
-private let separator = ":::"
+private let separator = "::"
 
 public enum LoggerType: CustomStringConvertible {
     case `default`(label: String)
