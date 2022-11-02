@@ -39,7 +39,7 @@ struct StdoutLogHandler: LogHandler {
         }
     }
 
-    private func hint(file: String, function: String, line: UInt) -> String {
+    private func hint(source: String, file: String, function: String, line: UInt) -> String {
         let fileStem = file
             .split(separator: "/")
             .last?
@@ -47,7 +47,7 @@ struct StdoutLogHandler: LogHandler {
             .first
             .map(String.init)
 
-        return [fileStem, function, line.description]
+        return [source, fileStem, function, line.description]
             .unwrapped()
             .joined(separator: "::")
     }
@@ -65,7 +65,7 @@ struct StdoutLogHandler: LogHandler {
 
     func log(
         level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?,
-        source _: String, file: String, function: String, line: UInt
+        source: String, file: String, function: String, line: UInt
     ) {
         let entryTag = RawLogEntry(message.description).tag
         let entryMessage: String
@@ -73,7 +73,7 @@ struct StdoutLogHandler: LogHandler {
 
         let timestampPart = LogDateFormatter.currentTimestamp()
         let labelPart = type.label.surroundedBy("[", "]")
-        let hintPart = hint(file: file, function: function, line: line)
+        let hintPart = hint(source: source, file: file, function: function, line: line)
         let threadPart: String? = {
             guard !Thread.isMainThread else { return nil }
             let threadName = Thread.current.name ?? "\(Thread.current)"
