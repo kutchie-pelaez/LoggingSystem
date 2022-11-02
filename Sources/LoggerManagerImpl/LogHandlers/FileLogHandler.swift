@@ -73,12 +73,21 @@ struct FileLogHandler: LogHandler {
     }
 
     private func makeHeaderMetadata() -> Logger.Metadata {
-        let versionString = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
-        let version = safeUndefinedIfNil(versionString.flatMap { try? Version($0) }?.description, "n/a")
+        let versionDescription = {
+            let versionString = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+            let version = versionString.flatMap { try? Version($0) }
+
+            if let version {
+                return version.description
+            } else {
+                assertionFailure("Invalid version format")
+                return "n/a"
+            }
+        }()
 
         return [
             MetadataKeys.sessionNumber.rawValue: "\(sessionNumber)",
-            MetadataKeys.version.rawValue: "\(version)"
+            MetadataKeys.version.rawValue: "\(versionDescription)"
         ]
     }
 
@@ -88,7 +97,14 @@ struct FileLogHandler: LogHandler {
         file: String, function: String, line: UInt
     ) -> Logger.Metadata {
         let timestamp = LogDateFormatter.currentTimestamp()
-        let fileLastComponent = safeUndefinedIfNil(file.split(separator: "/").last, "n/a")
+        let fileLastComponent = {
+            if let lastFileComponent = file.split(separator: "/").last {
+                return lastFileComponent
+            } else {
+                assertionFailure("Ivalid file format")
+                return "n/a"
+            }
+        }()
 
         var coreMetadata: Logger.Metadata = [
             MetadataKeys.file.rawValue: "\(fileLastComponent)",
