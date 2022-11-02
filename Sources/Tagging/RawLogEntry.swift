@@ -1,5 +1,4 @@
 import Core
-import Undefined
 
 private let separator = "::"
 
@@ -24,32 +23,23 @@ public struct RawLogEntry: CustomStringConvertible {
             guard let rawValue = rawValue.map(String.init) else { return }
 
             if let validTag = LogEntryTag(rawValue: rawValue) {
-                tag = safeUndefinedIf(
-                    tag != nil,
-                    fallback: validTag,
-                    message: "Multiple tags detecteed in log entry",
-                    metadata: [
-                        "rawLogEntry": rawValue
-                    ]
-                )
+                if tag != nil {
+                    assertionFailure("Multiple tags detecteed in log entry")
+                } else {
+                    tag = validTag
+                }
             } else if rawValue.hasPrefix("{") && rawValue.hasSuffix("}") {
-                metadata = safeUndefinedIf(
-                    metadata != nil,
-                    fallback: rawValue,
-                    message: "Multiple metadatas detecteed in log entry",
-                    metadata: [
-                        "rawLogEntry": rawValue
-                    ]
-                )
+                if metadata != nil {
+                    assertionFailure("Multiple metadatas detecteed in log entry")
+                } else {
+                    metadata = rawValue
+                }
             } else {
-                message = safeUndefinedIf(
-                    message != nil,
-                    fallback: rawValue,
-                    message: "Multiple messages detecteed in log entry",
-                    metadata: [
-                        "rawLogEntry": rawValue
-                    ]
-                )
+                if message != nil {
+                    assertionFailure("Multiple messages detecteed in log entry")
+                } else {
+                    message = rawValue
+                }
             }
         }
 
